@@ -1,0 +1,25 @@
+# ---- .NET ----
+[Bb]in/
+[Oo]bj/
+*.user
+.vs/
+
+# ---- Node / frontend ----
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ---- Env / secrets ----
+.env
+.env.local
+*.env
+!.env.example
+
+# ---- Uploaded files (keep the folder, ignore contents) ----
+backend/src/Ecommerce.API/wwwroot/uploads/*
+!backend/src/Ecommerce.API/wwwroot/uploads/.gitkeep
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+*.log
