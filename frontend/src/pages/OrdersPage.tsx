@@ -1,19 +1,22 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Package } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Package, ChevronDown } from 'lucide-react'
 import { Seo } from '@/components/Seo'
 import { Container } from '@/components/Container'
 import { Button } from '@/components/ui/Button'
 import { Spinner, EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/order/OrderStatus'
+import { OrderDetailInline } from '@/components/order/OrderDetailInline'
 import { useMyOrders } from '@/hooks/queries'
 import { formatPrice, formatDate } from '@/lib/format'
 import { getApiErrorMessage } from '@/lib/api'
 import { staggerContainer, cardItem } from '@/lib/motion'
+import { cn } from '@/lib/utils'
 
 export function OrdersPage() {
   const [page, setPage] = useState(1)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
   const { data, isLoading, isError, error, refetch } = useMyOrders(page)
 
   return (
@@ -36,20 +39,49 @@ export function OrdersPage() {
         ) : (
           <>
             <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
-              {data.items.map((o) => (
-                <motion.div key={o.id} variants={cardItem}>
-                  <Link to={`/account/orders/${o.id}`} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-ink-100 p-5 transition hover:border-ink-200 hover:shadow-sm">
-                    <div>
-                      <p className="font-semibold text-ink-900">Order #{o.id}</p>
-                      <p className="text-sm text-ink-500">{formatDate(o.createdAt)} · {o.itemCount} item{o.itemCount === 1 ? '' : 's'}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <StatusBadge status={o.status} />
-                      <span className="font-bold text-ink-900">{formatPrice(o.totalInCents)}</span>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+              {data.items.map((o) => {
+                const isOpen = expandedId === o.id
+                return (
+                  <motion.div
+                    key={o.id}
+                    variants={cardItem}
+                    className={cn('overflow-hidden rounded-2xl border transition', isOpen ? 'border-ink-200 shadow-sm' : 'border-ink-100 hover:border-ink-200')}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId((cur) => (cur === o.id ? null : o.id))}
+                      aria-expanded={isOpen}
+                      className="flex w-full flex-wrap items-center justify-between gap-4 p-5 text-left"
+                    >
+                      <div>
+                        <p className="font-semibold text-ink-900">Order #{o.id}</p>
+                        <p className="text-sm text-ink-500">{formatDate(o.createdAt)} · {o.itemCount} item{o.itemCount === 1 ? '' : 's'}</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <StatusBadge status={o.status} />
+                        <span className="font-bold text-ink-900">{formatPrice(o.totalInCents)}</span>
+                        <ChevronDown className={cn('size-5 text-ink-400 transition-transform', isOpen && 'rotate-180')} />
+                      </div>
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25, ease: 'easeInOut' }}
+                          className="overflow-hidden"
+                        >
+                          <div className="border-t border-ink-100 p-5">
+                            <OrderDetailInline orderId={o.id} />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                )
+              })}
             </motion.div>
 
             {data.totalPages > 1 && (
