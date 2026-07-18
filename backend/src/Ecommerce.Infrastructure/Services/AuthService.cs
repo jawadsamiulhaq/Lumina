@@ -51,6 +51,9 @@ public class AuthService : IAuthService
         if (user is null || !await _userManager.CheckPasswordAsync(user, request.Password))
             throw new UnauthorizedException("Invalid email or password.");
 
+        if (await _userManager.IsLockedOutAsync(user))
+            throw new UnauthorizedException("This account is temporarily locked. Please try again later.");
+
         return await BuildAuthResultAsync(user, ct);
     }
 
@@ -66,6 +69,14 @@ public class AuthService : IAuthService
 
         var user = await _userManager.FindByIdAsync(stored.UserId.ToString())
             ?? throw new UnauthorizedException("User no longer exists.");
+
+        if (await _userManager.IsLockedOutAsync(user))
+        {
+            // Locked accounts can't refresh; revoke the token so it can't be reused.
+            stored.RevokedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            throw new UnauthorizedException("This account is temporarily locked. Please try again later.");
+        }
 
         // Rotate: revoke the used token and issue a new one
         stored.RevokedAt = DateTime.UtcNow;
@@ -90,15 +101,35 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
         var roles = await _userManager.GetRolesAsync(user);
-        return ToDto(user, roles);
+        var permissions = await ResolvePermissionsAsync(roles, ct);
+        return ToDto(user, roles, permissions);
     }
 
     // ---- helpers ----
 
+    /// <summary>Effective permissions = the union of every permission granted to the user's roles.</summary>
+    private async Task<List<string>> ResolvePermissionsAsync(IEnumerable<string> roleNames, CancellationToken ct)
+    {
+        var names = roleNames.ToList();
+        if (names.Count == 0) return new List<string>();
+
+        var roleIds = await _db.Roles
+            .Where(r => names.Contains(r.Name!))
+            .Select(r => r.Id)
+            .ToListAsync(ct);
+
+        return await _db.RolePermissions
+            .Where(rp => roleIds.Contains(rp.RoleId))
+            .Select(rp => rp.Permission!.Name)
+            .Distinct()
+            .ToListAsync(ct);
+    }
+
     private async Task<AuthResult> BuildAuthResultAsync(ApplicationUser user, CancellationToken ct, RefreshToken? replacing = null)
     {
         var roles = await _userManager.GetRolesAsync(user);
-        var access = _tokens.CreateAccessToken(user.Id.ToString(), user.Email!, roles);
+        var permissions = await ResolvePermissionsAsync(roles, ct);
+        var access = _tokens.CreateAccessToken(user.Id.ToString(), user.Email!, roles, permissions);
 
         var rawRefresh = _tokens.CreateRefreshToken();
         var refreshHash = _tokens.HashRefreshToken(rawRefresh);
@@ -116,9 +147,9 @@ public class AuthService : IAuthService
         });
         await _db.SaveChangesAsync(ct);
 
-        return new AuthResult(access.Token, access.ExpiresAt, rawRefresh, refreshExpiry, ToDto(user, roles));
+        return new AuthResult(access.Token, access.ExpiresAt, rawRefresh, refreshExpiry, ToDto(user, roles, permissions));
     }
 
-    private static UserDto ToDto(ApplicationUser user, IEnumerable<string> roles) =>
-        new(user.Id.ToString(), user.Email ?? "", user.FirstName, user.LastName, roles.ToList());
+    private static UserDto ToDto(ApplicationUser user, IEnumerable<string> roles, IEnumerable<string> permissions) =>
+        new(user.Id.ToString(), user.Email ?? "", user.FirstName, user.LastName, roles.ToList(), permissions.ToList());
 }

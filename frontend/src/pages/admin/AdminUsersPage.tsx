@@ -1,80 +1,41 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ShieldCheck, ShieldOff } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { Spinner, ErrorState } from '@/components/ui/States'
-import { useAdminUsers } from '@/hooks/queries'
-import { adminApi } from '@/api/services'
-import { formatDate } from '@/lib/format'
-import { getApiErrorMessage } from '@/lib/api'
-import { toast } from '@/store/toastStore'
+import { useState } from 'react'
+import { Users, ShieldCheck } from 'lucide-react'
+import { useAdminUsers, useRoles } from '@/hooks/queries'
+import { UsersTab } from '@/components/admin/rbac/UsersTab'
+import { RolesTab } from '@/components/admin/rbac/RolesTab'
+
+type Tab = 'users' | 'roles'
 
 export function AdminUsersPage() {
-  const qc = useQueryClient()
-  const { data, isLoading, isError, error, refetch } = useAdminUsers()
-
-  const mutation = useMutation({
-    mutationFn: (v: { id: string; isAdmin: boolean }) => adminApi.setRole(v.id, v.isAdmin),
-    onSuccess: () => { toast.success('Role updated.'); void qc.invalidateQueries({ queryKey: ['admin-users'] }) },
-    onError: (err) => toast.error(getApiErrorMessage(err)),
-  })
+  const { data: users } = useAdminUsers()
+  const { data: roles } = useRoles()
+  const [tab, setTab] = useState<Tab>('users')
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight text-ink-900">Users</h1>
-      <p className="mt-1 text-sm text-ink-500">Promote or demote administrators.</p>
-
-      <div className="mt-6 overflow-hidden rounded-2xl border border-ink-100 bg-white">
-        {isLoading ? (
-          <Spinner />
-        ) : isError ? (
-          <ErrorState message={getApiErrorMessage(error)} onRetry={() => void refetch()} />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-ink-100 bg-ink-50 text-left text-xs uppercase tracking-wide text-ink-400">
-                <tr>
-                  <th className="px-4 py-3 font-medium">User</th>
-                  <th className="px-4 py-3 font-medium">Roles</th>
-                  <th className="px-4 py-3 font-medium">Joined</th>
-                  <th className="px-4 py-3 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ink-100">
-                {data?.map((u) => {
-                  const isAdmin = u.roles.includes('Admin')
-                  return (
-                    <tr key={u.id} className="hover:bg-ink-50">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-ink-900">{u.firstName} {u.lastName}</p>
-                        <p className="text-xs text-ink-400">{u.email}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {u.roles.map((r) => (
-                            <span key={r} className={`rounded-full px-2 py-0.5 text-xs font-medium ${r === 'Admin' ? 'bg-brand-50 text-brand-700' : 'bg-ink-100 text-ink-500'}`}>{r}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-ink-600">{formatDate(u.createdAt)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <Button
-                          variant={isAdmin ? 'outline' : 'primary'}
-                          size="sm"
-                          className="gap-1.5"
-                          loading={mutation.isPending && mutation.variables?.id === u.id}
-                          onClick={() => mutation.mutate({ id: u.id, isAdmin: !isAdmin })}
-                        >
-                          {isAdmin ? <><ShieldOff className="size-4" /> Demote</> : <><ShieldCheck className="size-4" /> Make admin</>}
-                        </Button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-ink-900">Users &amp; access</h1>
+        <p className="mt-1 text-sm text-ink-500">Manage users, roles and permissions (RBAC).</p>
       </div>
+
+      <div className="mt-6 flex gap-1 rounded-xl bg-ink-100 p-1 sm:w-fit">
+        <TabButton active={tab === 'users'} onClick={() => setTab('users')} icon={Users} label="Users" count={users?.length} />
+        <TabButton active={tab === 'roles'} onClick={() => setTab('roles')} icon={ShieldCheck} label="Roles & permissions" count={roles?.length} />
+      </div>
+
+      <div className="mt-6">{tab === 'users' ? <UsersTab /> : <RolesTab />}</div>
     </div>
+  )
+}
+
+function TabButton({ active, onClick, icon: Icon, label, count }: { active: boolean; onClick: () => void; icon: typeof Users; label: string; count?: number }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition sm:flex-none ${active ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-700'}`}
+    >
+      <Icon className="size-4" /> {label}
+      {count != null && <span className={`rounded-full px-1.5 text-xs ${active ? 'bg-ink-100 text-ink-500' : 'bg-ink-200/60 text-ink-500'}`}>{count}</span>}
+    </button>
   )
 }

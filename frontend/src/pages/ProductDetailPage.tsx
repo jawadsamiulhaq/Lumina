@@ -18,6 +18,7 @@ import { formatPrice, formatDate } from '@/lib/format'
 import { getApiErrorMessage } from '@/lib/api'
 import { toast } from '@/store/toastStore'
 import { cn } from '@/lib/utils'
+import { optimizeImageUrl } from '@/lib/image'
 import { Star } from 'lucide-react'
 
 const FALLBACK = 'https://placehold.co/900x900/eceef2/8591a6?text=No+image'
@@ -92,13 +93,14 @@ export function ProductDetailPage() {
               <AnimatePresence mode="wait">
                 <motion.img
                   key={current.id + '-' + activeImg}
-                  src={current.url}
+                  src={optimizeImageUrl(current.url, 1000)}
                   alt={current.altText ?? product.name}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.25 }}
                   style={zoom ? { transformOrigin: `${zoom.x}% ${zoom.y}%`, transform: 'scale(1.7)' } : undefined}
+                  onError={(e) => { if (e.currentTarget.src !== FALLBACK) e.currentTarget.src = FALLBACK }}
                   className="size-full object-cover transition-transform duration-200"
                 />
               </AnimatePresence>
@@ -114,7 +116,7 @@ export function ProductDetailPage() {
                       (i === activeImg ? 'border-brand-500' : 'border-transparent hover:border-ink-200')
                     }
                   >
-                    <img src={img.url} alt="" className="size-full object-cover" />
+                    <img src={optimizeImageUrl(img.url, 160)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -154,12 +156,23 @@ export function ProductDetailPage() {
                           <button
                             key={val.id}
                             type="button"
-                            onClick={() => { setSelectedValues((s) => ({ ...s, [opt.id]: val.id })); setQty(1) }}
+                            onClick={() => {
+                              setSelectedValues((s) => ({ ...s, [opt.id]: val.id }))
+                              setQty(1)
+                              // Switch the gallery to this value's linked image (e.g. a color swatch photo).
+                              if (val.imageUrl) {
+                                const idx = images.findIndex((img) => img.url === val.imageUrl)
+                                if (idx !== -1) setActiveImg(idx)
+                              }
+                            }}
                             className={cn(
-                              'rounded-full border px-4 py-2 text-sm font-medium transition',
+                              'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition',
                               isSelected ? 'border-ink-900 bg-ink-900 text-white' : 'border-ink-200 text-ink-700 hover:border-ink-400',
                             )}
                           >
+                            {val.imageUrl && (
+                              <img src={val.imageUrl} alt="" className="size-5 rounded-full object-cover" />
+                            )}
                             {val.value}
                           </button>
                         )

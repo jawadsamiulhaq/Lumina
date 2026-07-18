@@ -1,8 +1,8 @@
+using Ecommerce.API.Authorization;
 using Ecommerce.Application.Common;
 using Ecommerce.Application.DTOs;
 using Ecommerce.Application.Interfaces;
 using Ecommerce.Domain.Constants;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ecommerce.API.Controllers;
@@ -30,7 +30,7 @@ public class ProductsController : BaseApiController
 
     // ---- Admin ----
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageProducts)]
     [HttpGet("admin")]
     public async Task<ActionResult<PagedResult<ProductListItemDto>>> AdminList([FromQuery] ProductQuery query, CancellationToken ct)
     {
@@ -38,12 +38,12 @@ public class ProductsController : BaseApiController
         return Ok(await _products.GetPagedAsync(query, ct));
     }
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageProducts)]
     [HttpGet("admin/{id:int}")]
     public async Task<ActionResult<ProductDetailDto>> AdminGet(int id, CancellationToken ct)
         => Ok(await _products.GetByIdAsync(id, ct));
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageProducts)]
     [HttpPost]
     [ProducesResponseType(typeof(ProductDetailDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<ProductDetailDto>> Create(CreateProductRequest request, CancellationToken ct)
@@ -52,12 +52,12 @@ public class ProductsController : BaseApiController
         return CreatedAtAction(nameof(GetBySlug), new { slug = created.Slug }, created);
     }
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageProducts)]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<ProductDetailDto>> Update(int id, UpdateProductRequest request, CancellationToken ct)
         => Ok(await _products.UpdateAsync(id, request, ct));
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageProducts)]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)

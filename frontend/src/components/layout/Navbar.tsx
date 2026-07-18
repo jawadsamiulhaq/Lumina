@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useCartStore } from '@/store/cartStore'
 import { useFlyStore } from '@/store/flyStore'
 import { useCategories } from '@/hooks/queries'
+import { useCanAccessAdmin } from '@/hooks/usePermission'
 import { cn } from '@/lib/utils'
 
 export function Navbar() {
@@ -15,7 +16,8 @@ export function Navbar() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [term, setTerm] = useState('')
 
-  const { user, status, isAdmin, logout } = useAuthStore()
+  const { user, status, logout } = useAuthStore()
+  const canAccessAdmin = useCanAccessAdmin()
   const count = useCartStore((s) => s.cart?.itemCount ?? 0)
   const bumpKey = useCartStore((s) => s.bumpKey)
   const openCart = useCartStore((s) => s.open)
@@ -93,7 +95,7 @@ export function Navbar() {
                   >
                     <MenuLink to="/account" icon={User} label="My account" onClick={() => setAccountOpen(false)} />
                     <MenuLink to="/account/orders" icon={Package} label="My orders" onClick={() => setAccountOpen(false)} />
-                    {isAdmin && (
+                    {canAccessAdmin && (
                       <MenuLink to="/admin" icon={LayoutDashboard} label="Admin dashboard" onClick={() => setAccountOpen(false)} />
                     )}
                     <button
@@ -170,7 +172,7 @@ export function Navbar() {
                   <>
                     <MobileLink to="/account" label="My account" onClick={() => setMenuOpen(false)} />
                     <MobileLink to="/account/orders" label="My orders" onClick={() => setMenuOpen(false)} />
-                    {isAdmin && <MobileLink to="/admin" label="Admin dashboard" onClick={() => setMenuOpen(false)} />}
+                    {canAccessAdmin && <MobileLink to="/admin" label="Admin dashboard" onClick={() => setMenuOpen(false)} />}
                     <button onClick={() => { setMenuOpen(false); void logout() }} className="px-1 py-2.5 text-left text-sm font-medium text-accent-500">
                       Sign out
                     </button>

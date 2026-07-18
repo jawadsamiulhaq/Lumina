@@ -1,21 +1,33 @@
 import { useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Store, Menu, X } from 'lucide-react'
 import { Seo } from '@/components/Seo'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/authStore'
+import { PERM } from '@/lib/permissions'
 
 const NAV = [
-  { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
-  { to: '/admin/products', label: 'Products', icon: Package, end: false },
-  { to: '/admin/categories', label: 'Categories', icon: FolderTree, end: false },
-  { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, end: false },
-  { to: '/admin/users', label: 'Users', icon: Users, end: false },
+  { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true, perm: PERM.dashboard },
+  { to: '/admin/products', label: 'Products', icon: Package, end: false, perm: PERM.products },
+  { to: '/admin/categories', label: 'Categories', icon: FolderTree, end: false, perm: PERM.categories },
+  { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, end: false, perm: PERM.orders },
+  { to: '/admin/users', label: 'Users', icon: Users, end: false, perm: PERM.users },
 ]
 
 export function AdminLayout() {
   const location = useLocation()
   const [open, setOpen] = useState(false)
+  const isAdmin = useAuthStore((s) => s.isAdmin)
+  const permissions = useAuthStore((s) => s.user?.permissions ?? [])
+
+  const canAccess = (perm: string) => isAdmin || permissions.includes(perm)
+  const navItems = NAV.filter((item) => canAccess(item.perm))
+
+  // Send users who can't see the dashboard to their first accessible section.
+  if (location.pathname === '/admin' && !canAccess(PERM.dashboard) && navItems.length > 0) {
+    return <Navigate to={navItems[0].to} replace />
+  }
 
   return (
     <div className="min-h-screen bg-ink-50">
@@ -37,7 +49,7 @@ export function AdminLayout() {
       <div className="mx-auto flex max-w-7xl">
         {/* Sidebar (desktop) */}
         <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-60 shrink-0 border-r border-ink-100 p-4 lg:block">
-          <SidebarNav />
+          <SidebarNav items={navItems} />
         </aside>
 
         {/* Sidebar (mobile) */}
@@ -50,7 +62,7 @@ export function AdminLayout() {
               transition={{ type: 'spring', stiffness: 340, damping: 34 }}
               className="fixed inset-y-0 left-0 top-16 z-40 w-64 border-r border-ink-100 bg-white p-4 lg:hidden"
             >
-              <SidebarNav onNavigate={() => setOpen(false)} />
+              <SidebarNav items={navItems} onNavigate={() => setOpen(false)} />
             </motion.aside>
           )}
         </AnimatePresence>
@@ -73,10 +85,10 @@ export function AdminLayout() {
   )
 }
 
-function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarNav({ items, onNavigate }: { items: typeof NAV; onNavigate?: () => void }) {
   return (
     <nav className="space-y-1">
-      {NAV.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}

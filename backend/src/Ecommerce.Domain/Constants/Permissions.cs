@@ -6,6 +6,9 @@ namespace Ecommerce.Domain.Constants;
 /// </summary>
 public static class Permissions
 {
+    /// <summary>JWT claim type under which each granted permission is emitted.</summary>
+    public const string ClaimType = "permission";
+
     public const string ManageProducts = "products.manage";
     public const string ManageCategories = "categories.manage";
     public const string ManageOrders = "orders.manage";

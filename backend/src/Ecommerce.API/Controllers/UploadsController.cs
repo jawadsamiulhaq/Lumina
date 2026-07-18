@@ -1,16 +1,16 @@
+using Ecommerce.API.Authorization;
 using Ecommerce.Application.Common;
 using Ecommerce.Application.DTOs;
 using Ecommerce.Application.Interfaces;
 using Ecommerce.Domain.Constants;
 using Ecommerce.Infrastructure.Settings;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
 namespace Ecommerce.API.Controllers;
 
-[Authorize(Roles = Roles.Admin)]
+[HasPermission(Permissions.ManageProducts)]
 [EnableRateLimiting("upload")]
 public class UploadsController : BaseApiController
 {

@@ -1,5 +1,5 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { categoriesApi, ordersApi, productsApi, reviewsApi, adminApi } from '@/api/services'
+import { categoriesApi, ordersApi, productsApi, reviewsApi, adminApi, rolesApi } from '@/api/services'
 import type { OrderStatus, ProductQueryParams } from '@/types/api'
 
 export const queryKeys = {
@@ -13,6 +13,8 @@ export const queryKeys = {
   adminOrder: (id: number) => ['admin-order', id] as const,
   adminProducts: (params: ProductQueryParams) => ['admin-products', params] as const,
   adminUsers: ['admin-users'] as const,
+  roles: ['admin-roles'] as const,
+  permissions: ['admin-permissions'] as const,
   dashboard: ['dashboard'] as const,
 }
 
@@ -58,6 +60,14 @@ export function useDashboard() {
 
 export function useAdminUsers() {
   return useQuery({ queryKey: queryKeys.adminUsers, queryFn: adminApi.users })
+}
+
+export function useRoles() {
+  return useQuery({ queryKey: queryKeys.roles, queryFn: rolesApi.list })
+}
+
+export function usePermissions() {
+  return useQuery({ queryKey: queryKeys.permissions, queryFn: rolesApi.permissions, staleTime: 10 * 60 * 1000 })
 }
 
 export function useAdminProducts(params: ProductQueryParams) {

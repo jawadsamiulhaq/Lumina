@@ -1,3 +1,4 @@
+using Ecommerce.API.Authorization;
 using Ecommerce.Application.Common;
 using Ecommerce.Application.DTOs;
 using Ecommerce.Application.Interfaces;
@@ -37,18 +38,18 @@ public class OrdersController : BaseApiController
 
     // ---- Admin ----
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageOrders)]
     [HttpGet("admin")]
     public async Task<ActionResult<PagedResult<OrderListItemDto>>> AdminList(
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] OrderStatus? status = null, CancellationToken ct = default)
         => Ok(await _orders.GetAllAsync(page, pageSize, status, ct));
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageOrders)]
     [HttpGet("admin/{id:int}")]
     public async Task<ActionResult<OrderDto>> AdminGet(int id, CancellationToken ct)
         => Ok(await _orders.GetByIdAsync(id, ct));
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageOrders)]
     [HttpPut("admin/{id:int}/status")]
     public async Task<ActionResult<OrderDto>> UpdateStatus(int id, UpdateOrderStatusRequest request, CancellationToken ct)
         => Ok(await _orders.UpdateStatusAsync(id, request.Status, ct));

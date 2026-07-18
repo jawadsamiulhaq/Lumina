@@ -18,13 +18,13 @@ public class ProductService : IProductService
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, 60);
 
-        var q = _db.Products
-            .AsNoTracking()
-            .Include(p => p.Category)
-            .Include(p => p.Images)
-            .Include(p => p.Reviews)
-            .Include(p => p.Variants)
-            .AsQueryable();
+        // Deliberately no Include() here: projecting straight into the DTO below turns each
+        // related collection (images/reviews/variants) into a lightweight correlated subquery
+        // instead of a JOIN. Combining multiple one-to-many Includes in a single query causes a
+        // row-multiplying "cartesian explosion" (e.g. 3 images x 8 reviews x 12 variants per
+        // product) that gets fetched and de-duplicated for every page of results — this avoids it
+        // entirely and also skips loading review/variant columns the list view never uses.
+        var q = _db.Products.AsNoTracking().AsQueryable();
 
         if (!query.IncludeInactive)
             q = q.Where(p => p.IsActive);
@@ -59,11 +59,55 @@ public class ProductService : IProductService
         };
 
         var total = await q.CountAsync(ct);
-        var entities = await q
+
+        // SQL Server rejects an aggregate whose expression mixes an outer-correlated column
+        // (p.PriceInCents) with an inner column (v.PriceInCents) — e.g. MIN(v.Price ?? p.Price) —
+        // so the variant-price aggregates below are kept single-column and the "override, or base
+        // price" logic is resolved afterwards in C# over this page's ≤60 rows.
+        var rows = await q
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.Slug,
+                p.PriceInCents,
+                p.Stock,
+                p.IsActive,
+                p.IsFeatured,
+                CategoryName = p.Category!.Name,
+                CategorySlug = p.Category.Slug,
+                PrimaryImageUrl = p.Images.OrderByDescending(i => i.IsPrimary).ThenBy(i => i.SortOrder).Select(i => i.Url).FirstOrDefault(),
+                ReviewCount = p.Reviews.Count,
+                AvgRating = p.Reviews.Count == 0 ? 0 : Math.Round(p.Reviews.Average(r => r.Rating), 2),
+                HasActiveVariants = p.Variants.Any(v => v.IsActive),
+                VariantStockSum = p.Variants.Where(v => v.IsActive).Sum(v => v.Stock),
+                HasUnpricedActiveVariant = p.Variants.Any(v => v.IsActive && v.PriceInCents == null),
+                MinOverridePrice = p.Variants.Where(v => v.IsActive && v.PriceInCents != null).Select(v => (int?)v.PriceInCents).Min(),
+            })
             .ToListAsync(ct);
-        var items = entities.Select(ToListItem).ToList();
+
+        var items = rows.Select(r =>
+        {
+            int price, stock;
+            if (r.HasActiveVariants)
+            {
+                stock = r.VariantStockSum;
+                // Effective price per variant = its override, or the base price when it has none.
+                price = r.HasUnpricedActiveVariant
+                    ? (r.MinOverridePrice is int overrideMin ? Math.Min(r.PriceInCents, overrideMin) : r.PriceInCents)
+                    : r.MinOverridePrice ?? r.PriceInCents;
+            }
+            else
+            {
+                price = r.PriceInCents;
+                stock = r.Stock;
+            }
+            return new ProductListItemDto(
+                r.Id, r.Name, r.Slug, price, stock, r.IsActive, r.IsFeatured,
+                r.CategoryName, r.CategorySlug, r.PrimaryImageUrl, r.AvgRating, r.ReviewCount, r.HasActiveVariants);
+        }).ToList();
 
         return new PagedResult<ProductListItemDto>(items, page, pageSize, total);
     }
@@ -162,13 +206,18 @@ public class ProductService : IProductService
 
     // ---- helpers ----
 
+    // Single-product graph (detail page / admin edit) still needs several nested collections
+    // materialized as entities to build the nested options/variants DTO. AsSplitQuery() issues one
+    // simple query per Include path instead of one big JOIN, avoiding the same cartesian blow-up
+    // the list query used to have — important once a product has many reviews or variants.
     private IQueryable<Product> LoadWithGraph() => _db.Products
         .AsNoTracking()
         .Include(p => p.Category)
         .Include(p => p.Images)
         .Include(p => p.Reviews)
         .Include(p => p.Options).ThenInclude(o => o.Values)
-        .Include(p => p.Variants).ThenInclude(v => v.Values).ThenInclude(vv => vv.OptionValue).ThenInclude(ov => ov!.Option);
+        .Include(p => p.Variants).ThenInclude(v => v.Values).ThenInclude(vv => vv.OptionValue).ThenInclude(ov => ov!.Option)
+        .AsSplitQuery();
 
     private async Task EnsureCategoryExists(int categoryId, CancellationToken ct)
     {
@@ -217,11 +266,11 @@ public class ProductService : IProductService
 
             var option = new ProductOption { Name = name, SortOrder = optIndex++ };
             var valIndex = 0;
-            foreach (var val in opt.Values.Select(v => v.Trim()).Where(v => v.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (var val in DistinctValues(opt.Values))
             {
-                var ov = new ProductOptionValue { Value = val, SortOrder = valIndex++ };
+                var ov = new ProductOptionValue { Value = val.Value, SortOrder = valIndex++, ImageUrl = NormalizeImageUrl(val.ImageUrl) };
                 option.Values.Add(ov);
-                valueLookup[(name.ToLowerInvariant(), val.ToLowerInvariant())] = ov;
+                valueLookup[(name.ToLowerInvariant(), val.Value.ToLowerInvariant())] = ov;
             }
             product.Options.Add(option);
         }
@@ -290,12 +339,13 @@ public class ProductService : IProductService
             option.SortOrder = optIndex++;
 
             var valIndex = 0;
-            foreach (var val in opt.Values.Select(v => v.Trim()).Where(v => v.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (var val in DistinctValues(opt.Values))
             {
-                var ov = option.Values.FirstOrDefault(v => string.Equals(v.Value, val, StringComparison.OrdinalIgnoreCase))
-                         ?? AddOptionValue(option, val);
+                var ov = option.Values.FirstOrDefault(v => string.Equals(v.Value, val.Value, StringComparison.OrdinalIgnoreCase))
+                         ?? AddOptionValue(option, val.Value);
                 ov.SortOrder = valIndex++;
-                valueLookup[(name.ToLowerInvariant(), val.ToLowerInvariant())] = ov;
+                ov.ImageUrl = NormalizeImageUrl(val.ImageUrl);
+                valueLookup[(name.ToLowerInvariant(), val.Value.ToLowerInvariant())] = ov;
             }
         }
 
@@ -346,6 +396,16 @@ public class ProductService : IProductService
         return ov;
     }
 
+    /// <summary>Trims and de-duplicates option values case-insensitively, keeping the first occurrence's image.</summary>
+    private static IEnumerable<ProductOptionValueInput> DistinctValues(IEnumerable<ProductOptionValueInput> values) =>
+        values
+            .Select(v => new ProductOptionValueInput { Value = v.Value.Trim(), ImageUrl = v.ImageUrl })
+            .Where(v => v.Value.Length > 0)
+            .GroupBy(v => v.Value, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First());
+
+    private static string? NormalizeImageUrl(string? url) => string.IsNullOrWhiteSpace(url) ? null : url.Trim();
+
     private async Task<string> GenerateUniqueSlugAsync(string name, int? excludeId, CancellationToken ct)
     {
         var baseSlug = SlugGenerator.Generate(name);
@@ -357,23 +417,6 @@ public class ProductService : IProductService
         return slug;
     }
 
-    private static ProductListItemDto ToListItem(Product p)
-    {
-        var activeVariants = p.Variants.Where(v => v.IsActive).ToList();
-        var hasVariants = activeVariants.Count > 0;
-        // For variant products, show the cheapest "from" price and total available stock.
-        var price = hasVariants ? activeVariants.Min(v => v.PriceInCents ?? p.PriceInCents) : p.PriceInCents;
-        var stock = hasVariants ? activeVariants.Sum(v => v.Stock) : p.Stock;
-
-        return new(
-            p.Id, p.Name, p.Slug, price, stock, p.IsActive, p.IsFeatured,
-            p.Category!.Name, p.Category.Slug,
-            p.Images.OrderByDescending(i => i.IsPrimary).ThenBy(i => i.SortOrder).Select(i => i.Url).FirstOrDefault(),
-            p.Reviews.Count == 0 ? 0 : Math.Round(p.Reviews.Average(r => r.Rating), 2),
-            p.Reviews.Count,
-            hasVariants);
-    }
-
     private static ProductDetailDto ToDetail(Product p)
     {
         var options = p.Options
@@ -381,7 +424,7 @@ public class ProductService : IProductService
             .Select(o => new ProductOptionDto(
                 o.Id, o.Name,
                 o.Values.OrderBy(v => v.SortOrder).ThenBy(v => v.Value)
-                    .Select(v => new ProductOptionValueDto(v.Id, v.Value)).ToList()))
+                    .Select(v => new ProductOptionValueDto(v.Id, v.Value, v.ImageUrl)).ToList()))
             .ToList();
 
         var variants = p.Variants

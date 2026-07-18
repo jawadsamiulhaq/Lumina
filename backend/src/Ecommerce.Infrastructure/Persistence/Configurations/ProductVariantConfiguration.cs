@@ -9,6 +9,7 @@ public class ProductOptionConfiguration : IEntityTypeConfiguration<ProductOption
     public void Configure(EntityTypeBuilder<ProductOption> b)
     {
         b.Property(x => x.Name).IsRequired().HasMaxLength(100);
+        b.HasIndex(x => x.ProductId);
         b.HasOne(x => x.Product)
             .WithMany(p => p.Options)
             .HasForeignKey(x => x.ProductId)
@@ -25,6 +26,8 @@ public class ProductOptionValueConfiguration : IEntityTypeConfiguration<ProductO
     public void Configure(EntityTypeBuilder<ProductOptionValue> b)
     {
         b.Property(x => x.Value).IsRequired().HasMaxLength(100);
+        b.Property(x => x.ImageUrl).HasMaxLength(1000);
+        b.HasIndex(x => x.ProductOptionId);
     }
 }
 
@@ -33,6 +36,9 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
     public void Configure(EntityTypeBuilder<ProductVariant> b)
     {
         b.Property(x => x.Sku).HasMaxLength(100);
+        // The product list picks min price / summed stock per product via a ProductId subquery,
+        // and the detail page filters active variants — both need this to seek, not scan.
+        b.HasIndex(x => x.ProductId);
         b.HasOne(x => x.Product)
             .WithMany(p => p.Variants)
             .HasForeignKey(x => x.ProductId)

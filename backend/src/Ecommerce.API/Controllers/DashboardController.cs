@@ -1,12 +1,12 @@
+using Ecommerce.API.Authorization;
 using Ecommerce.Application.DTOs;
 using Ecommerce.Application.Interfaces;
 using Ecommerce.Domain.Constants;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ecommerce.API.Controllers;
 
-[Authorize(Roles = Roles.Admin)]
+[HasPermission(Permissions.ViewDashboard)]
 [ApiController]
 [Route("api/v1/admin/dashboard")]
 [Produces("application/json")]

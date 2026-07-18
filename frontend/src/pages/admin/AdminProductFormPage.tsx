@@ -62,7 +62,7 @@ export function AdminProductFormPage() {
       })
       setImages(product.images.map((i) => ({ url: i.url, altText: i.altText, sortOrder: i.sortOrder, isPrimary: i.isPrimary })))
 
-      setOptions(product.options.map((o) => ({ name: o.name, values: o.values.map((v) => v.value) })))
+      setOptions(product.options.map((o) => ({ name: o.name, values: o.values.map((v) => ({ value: v.value, imageUrl: v.imageUrl })) })))
       const valueMap = new Map<number, ComboPart>()
       product.options.forEach((o) => o.values.forEach((v) => valueMap.set(v.id, { optionName: o.name, value: v.value })))
       setVariants(
@@ -95,8 +95,13 @@ export function AdminProductFormPage() {
       isFeatured: values.isFeatured,
       images: images.map((img, i) => ({ ...img, sortOrder: i })),
       options: options
-        .filter((o) => o.name.trim() && o.values.some((v) => v.trim()))
-        .map((o) => ({ name: o.name.trim(), values: o.values.map((v) => v.trim()).filter(Boolean) })),
+        .filter((o) => o.name.trim() && o.values.some((v) => v.value.trim()))
+        .map((o) => ({
+          name: o.name.trim(),
+          values: o.values
+            .filter((v) => v.value.trim())
+            .map((v) => ({ value: v.value.trim(), imageUrl: v.imageUrl })),
+        })),
       variants: variants.map((v) => ({
         sku: v.sku.trim() || null,
         priceInCents: v.priceInCents,
@@ -157,6 +162,7 @@ export function AdminProductFormPage() {
             options={options}
             variants={variants}
             basePriceCents={basePriceCents}
+            images={images}
             onOptionsChange={setOptions}
             onVariantsChange={setVariants}
           />

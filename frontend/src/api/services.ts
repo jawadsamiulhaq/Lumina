@@ -10,11 +10,13 @@ import type {
   OrderListItem,
   OrderStatus,
   PagedResult,
+  Permission,
   ProductDetail,
   ProductInput,
   ProductListItem,
   ProductQueryParams,
   Review,
+  Role,
   ShippingAddressInput,
   UploadResult,
   User,
@@ -89,11 +91,44 @@ export const reviewsApi = {
 }
 
 // ---- Admin: users + dashboard ----
+export interface CreateUserBody {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+  roles: string[]
+}
+export interface UpdateUserBody {
+  firstName: string
+  lastName: string
+  email: string
+  roles: string[]
+}
+
 export const adminApi = {
   users: () => api.get<AdminUser[]>('/admin/users').then((r) => r.data),
+  createUser: (body: CreateUserBody) => api.post<AdminUser>('/admin/users', body).then((r) => r.data),
+  updateUser: (id: string, body: UpdateUserBody) => api.put<AdminUser>(`/admin/users/${id}`, body).then((r) => r.data),
+  deleteUser: (id: string) => api.delete(`/admin/users/${id}`).then((r) => r.data),
   setRole: (id: string, isAdmin: boolean) =>
     api.put<AdminUser>(`/admin/users/${id}/role`, { isAdmin }).then((r) => r.data),
+  setUserRoles: (id: string, roles: string[]) =>
+    api.put<AdminUser>(`/admin/users/${id}/roles`, { roles }).then((r) => r.data),
+  lockUser: (id: string, minutes: number) =>
+    api.post<AdminUser>(`/admin/users/${id}/lock`, { minutes }).then((r) => r.data),
+  unlockUser: (id: string) => api.post<AdminUser>(`/admin/users/${id}/unlock`).then((r) => r.data),
   dashboard: () => api.get<DashboardStats>('/admin/dashboard').then((r) => r.data),
+}
+
+// ---- Admin: roles + permissions (RBAC) ----
+export const rolesApi = {
+  list: () => api.get<Role[]>('/admin/roles').then((r) => r.data),
+  permissions: () => api.get<Permission[]>('/admin/permissions').then((r) => r.data),
+  create: (name: string) => api.post<Role>('/admin/roles', { name }).then((r) => r.data),
+  update: (id: string, name: string) => api.put<Role>(`/admin/roles/${id}`, { name }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/admin/roles/${id}`).then((r) => r.data),
+  setPermissions: (id: string, permissions: string[]) =>
+    api.put<Role>(`/admin/roles/${id}/permissions`, { permissions }).then((r) => r.data),
 }
 
 // ---- Uploads ----

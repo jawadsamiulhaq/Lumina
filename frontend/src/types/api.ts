@@ -42,6 +42,7 @@ export interface ProductListItem {
 export interface ProductOptionValue {
   id: number
   value: string
+  imageUrl: string | null
 }
 
 export interface ProductOption {
@@ -190,6 +191,7 @@ export interface User {
   firstName: string
   lastName: string
   roles: string[]
+  permissions: string[]
 }
 
 export interface AuthResponse {
@@ -205,9 +207,14 @@ export interface ProductImageInput {
   isPrimary: boolean
 }
 
+export interface ProductOptionValueInput {
+  value: string
+  imageUrl?: string | null
+}
+
 export interface ProductOptionInput {
   name: string
-  values: string[]
+  values: ProductOptionValueInput[]
 }
 
 export interface ProductVariantValueInput {
@@ -243,6 +250,21 @@ export interface AdminUser {
   lastName: string
   roles: string[]
   createdAt: string
+  isLocked: boolean
+  lockedUntil: string | null
+}
+
+export interface Role {
+  id: string
+  name: string
+  isSystem: boolean
+  permissions: string[]
+  memberCount: number
+}
+
+export interface Permission {
+  name: string
+  description: string
 }
 
 export interface LowStockProduct {

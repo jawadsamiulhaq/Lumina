@@ -19,7 +19,8 @@ public record UserDto(
     string Email,
     string FirstName,
     string LastName,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<string> Permissions);
 
 /// <summary>
 /// Access token returned in the body; the refresh token is set as an httpOnly cookie

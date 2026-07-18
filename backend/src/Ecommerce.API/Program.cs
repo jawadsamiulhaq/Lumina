@@ -1,11 +1,13 @@
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Ecommerce.API.Authorization;
 using Ecommerce.API.Filters;
 using Ecommerce.API.Middleware;
 using Ecommerce.Application;
 using Ecommerce.Infrastructure;
 using Ecommerce.Infrastructure.Persistence;
 using Ecommerce.Infrastructure.Settings;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
 
@@ -24,6 +26,11 @@ builder.Services.AddControllers(options =>
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAuthorization();
+
+// Permission-based authorization: [HasPermission("...")] resolves to a policy that
+// checks the user's permission claims (Admins always pass).
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 // CORS for the SPA
 var frontendUrl = builder.Configuration.GetSection(FrontendSettings.SectionName)["BaseUrl"] ?? "http://localhost:5173";

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Ecommerce.Application.Interfaces;
+using Ecommerce.Domain.Constants;
 using Ecommerce.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -15,7 +16,7 @@ public class TokenService : ITokenService
 
     public TokenService(IOptions<JwtSettings> settings) => _settings = settings.Value;
 
-    public AccessToken CreateAccessToken(string userId, string email, IEnumerable<string> roles)
+    public AccessToken CreateAccessToken(string userId, string email, IEnumerable<string> roles, IEnumerable<string> permissions)
     {
         var now = DateTime.UtcNow;
         var expires = now.AddMinutes(_settings.AccessTokenMinutes);
@@ -28,6 +29,7 @@ public class TokenService : ITokenService
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+        claims.AddRange(permissions.Distinct().Select(p => new Claim(Permissions.ClaimType, p)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

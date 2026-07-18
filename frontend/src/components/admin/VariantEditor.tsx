@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, Wand2 } from 'lucide-react'
+import { Plus, X, Trash2, Wand2, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import type { ProductImageInput } from '@/types/api'
+import { cn } from '@/lib/utils'
 
 // ---- Draft models used while editing (before mapping to the API request) ----
 
-export type OptionDraft = { name: string; values: string[] }
+export type OptionValueDraft = { value: string; imageUrl: string | null }
+export type OptionDraft = { name: string; values: OptionValueDraft[] }
 export type ComboPart = { optionName: string; value: string }
 export type VariantDraft = {
   key: string
@@ -30,7 +33,7 @@ export function comboLabel(combo: ComboPart[]): string {
 
 function cartesian(options: OptionDraft[]): ComboPart[][] {
   const valid = options
-    .map((o) => ({ name: o.name.trim(), values: o.values.map((v) => v.trim()).filter(Boolean) }))
+    .map((o) => ({ name: o.name.trim(), values: o.values.map((v) => v.value.trim()).filter(Boolean) }))
     .filter((o) => o.name && o.values.length)
   if (!valid.length) return []
   return valid.reduce<ComboPart[][]>(
@@ -43,11 +46,12 @@ interface Props {
   options: OptionDraft[]
   variants: VariantDraft[]
   basePriceCents: number
+  images: ProductImageInput[]
   onOptionsChange: (o: OptionDraft[]) => void
   onVariantsChange: (v: VariantDraft[]) => void
 }
 
-export function VariantEditor({ options, variants, basePriceCents, onOptionsChange, onVariantsChange }: Props) {
+export function VariantEditor({ options, variants, basePriceCents, images, onOptionsChange, onVariantsChange }: Props) {
   const patchOption = (i: number, patch: Partial<OptionDraft>) =>
     onOptionsChange(options.map((o, idx) => (idx === i ? { ...o, ...patch } : o)))
 
@@ -92,6 +96,7 @@ export function VariantEditor({ options, variants, basePriceCents, onOptionsChan
             <OptionRow
               key={i}
               option={opt}
+              images={images}
               onNameChange={(name) => patchOption(i, { name })}
               onValuesChange={(values) => patchOption(i, { values })}
               onRemove={() => onOptionsChange(options.filter((_, idx) => idx !== i))}
@@ -181,23 +186,31 @@ export function VariantEditor({ options, variants, basePriceCents, onOptionsChan
 
 function OptionRow({
   option,
+  images,
   onNameChange,
   onValuesChange,
   onRemove,
 }: {
   option: OptionDraft
+  images: ProductImageInput[]
   onNameChange: (name: string) => void
-  onValuesChange: (values: string[]) => void
+  onValuesChange: (values: OptionValueDraft[]) => void
   onRemove: () => void
 }) {
   const [draft, setDraft] = useState('')
+  const [pickerFor, setPickerFor] = useState<string | null>(null)
 
   const addValue = () => {
     const v = draft.trim()
     if (!v) return
-    if (!option.values.some((x) => x.toLowerCase() === v.toLowerCase())) onValuesChange([...option.values, v])
+    if (!option.values.some((x) => x.value.toLowerCase() === v.toLowerCase()))
+      onValuesChange([...option.values, { value: v, imageUrl: null }])
     setDraft('')
   }
+
+  const removeValue = (value: string) => onValuesChange(option.values.filter((x) => x.value !== value))
+  const setValueImage = (value: string, imageUrl: string | null) =>
+    onValuesChange(option.values.map((x) => (x.value === value ? { ...x, imageUrl } : x)))
 
   return (
     <div className="rounded-xl border border-ink-100 p-3">
@@ -216,15 +229,66 @@ function OptionRow({
           <Trash2 className="size-4" />
         </button>
       </div>
+      {images.length > 0 && (
+        <p className="mt-2 text-xs text-ink-400">Tip: link a value (e.g. a color) to a product image so the gallery switches when it's picked.</p>
+      )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-start gap-2">
         {option.values.map((val) => (
-          <span key={val} className="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2.5 py-1 text-xs font-medium text-ink-700">
-            {val}
-            <button type="button" onClick={() => onValuesChange(option.values.filter((x) => x !== val))} className="text-ink-400 hover:text-accent-500">
-              <X className="size-3" />
-            </button>
-          </span>
+          <div key={val.value} className="flex flex-col items-start gap-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ink-100 py-1 pl-1 pr-2.5 text-xs font-medium text-ink-700">
+              {val.imageUrl ? (
+                <img src={val.imageUrl} alt="" className="size-5 rounded-full object-cover" />
+              ) : images.length > 0 ? (
+                <span className="grid size-5 place-items-center rounded-full bg-ink-200 text-ink-400">
+                  <ImageIcon className="size-3" />
+                </span>
+              ) : null}
+              {val.value}
+              {images.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPickerFor(pickerFor === val.value ? null : val.value)}
+                  title="Link an image"
+                  className={cn('rounded-full p-0.5', pickerFor === val.value ? 'bg-brand-100 text-brand-600' : 'text-ink-400 hover:text-brand-600')}
+                >
+                  <ImageIcon className="size-3" />
+                </button>
+              )}
+              <button type="button" onClick={() => removeValue(val.value)} className="text-ink-400 hover:text-accent-500">
+                <X className="size-3" />
+              </button>
+            </span>
+
+            {pickerFor === val.value && (
+              <div className="flex flex-wrap gap-1.5 rounded-xl border border-ink-100 bg-white p-2 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => { setValueImage(val.value, null); setPickerFor(null) }}
+                  title="No image"
+                  className={cn(
+                    'grid size-9 place-items-center rounded-lg border text-[9px] font-medium text-ink-400',
+                    !val.imageUrl ? 'border-brand-500 text-brand-600' : 'border-ink-200 hover:border-ink-300',
+                  )}
+                >
+                  None
+                </button>
+                {images.map((img) => (
+                  <button
+                    key={img.url}
+                    type="button"
+                    onClick={() => { setValueImage(val.value, img.url); setPickerFor(null) }}
+                    className={cn(
+                      'size-9 overflow-hidden rounded-lg border-2',
+                      val.imageUrl === img.url ? 'border-brand-500' : 'border-transparent hover:border-ink-200',
+                    )}
+                  >
+                    <img src={img.url} alt="" className="size-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
         <div className="flex items-center gap-1">
           <Input

@@ -8,8 +8,11 @@ import { cardItem } from '@/lib/motion'
 import { Rating } from '@/components/ui/Rating'
 import { useAddToCart } from '@/hooks/useAddToCart'
 import { cn } from '@/lib/utils'
+import { optimizeImageUrl, optimizedSrcSet } from '@/lib/image'
 
 const FALLBACK = 'https://placehold.co/600x600/eceef2/8591a6?text=No+image'
+// Rendered card width tops out around 280px in the 4-col desktop grid; 2x covers retina displays.
+const CARD_IMAGE_WIDTH = 400
 
 export function ProductCard({ product }: { product: ProductListItem }) {
   const imgRef = useRef<HTMLImageElement>(null)
@@ -38,9 +41,13 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           <div className="relative aspect-square overflow-hidden bg-ink-50">
             <motion.img
               ref={imgRef}
-              src={product.primaryImageUrl ?? FALLBACK}
+              src={optimizeImageUrl(product.primaryImageUrl ?? FALLBACK, CARD_IMAGE_WIDTH)}
+              srcSet={optimizedSrcSet(product.primaryImageUrl ?? FALLBACK, CARD_IMAGE_WIDTH)}
+              sizes="(min-width: 1024px) 280px, (min-width: 768px) 30vw, 45vw"
               alt={product.name}
               loading="lazy"
+              decoding="async"
+              onError={(e) => { if (e.currentTarget.src !== FALLBACK) e.currentTarget.src = FALLBACK }}
               className="size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.08]"
             />
             {product.isFeatured && (

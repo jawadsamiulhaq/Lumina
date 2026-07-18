@@ -2,7 +2,7 @@ namespace Ecommerce.Application.DTOs;
 
 public record ProductImageDto(int Id, string Url, string? AltText, int SortOrder, bool IsPrimary);
 
-public record ProductOptionValueDto(int Id, string Value);
+public record ProductOptionValueDto(int Id, string Value, string? ImageUrl);
 
 public record ProductOptionDto(int Id, string Name, IReadOnlyList<ProductOptionValueDto> Values);
 
@@ -63,10 +63,18 @@ public class ProductImageInput
     public bool IsPrimary { get; set; }
 }
 
+public class ProductOptionValueInput
+{
+    public string Value { get; set; } = string.Empty;
+
+    /// <summary>Optional image (must match one of the product's Images[].Url) shown when this value is selected.</summary>
+    public string? ImageUrl { get; set; }
+}
+
 public class ProductOptionInput
 {
     public string Name { get; set; } = string.Empty;
-    public List<string> Values { get; set; } = new();
+    public List<ProductOptionValueInput> Values { get; set; } = new();
 }
 
 public class ProductVariantValueInput

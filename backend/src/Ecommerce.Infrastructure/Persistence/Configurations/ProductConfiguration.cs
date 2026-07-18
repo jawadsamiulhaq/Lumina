@@ -46,5 +46,8 @@ public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
     {
         b.Property(x => x.Url).IsRequired().HasMaxLength(1000);
         b.Property(x => x.AltText).HasMaxLength(300);
+        // The product list/detail queries pick the primary image per product via a ProductId
+        // subquery — without this index that subquery scans the whole table on every row.
+        b.HasIndex(x => x.ProductId);
     }
 }

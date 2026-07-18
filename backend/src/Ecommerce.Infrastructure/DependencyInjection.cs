@@ -82,6 +82,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
+        services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IDashboardService, DashboardService>();
 
         return services;

@@ -1,7 +1,7 @@
+using Ecommerce.API.Authorization;
 using Ecommerce.Application.DTOs;
 using Ecommerce.Application.Interfaces;
 using Ecommerce.Domain.Constants;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ecommerce.API.Controllers;
@@ -17,7 +17,7 @@ public class CategoriesController : BaseApiController
     public async Task<ActionResult<IReadOnlyList<CategoryDto>>> List(CancellationToken ct)
         => Ok(await _categories.GetAllAsync(ct));
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageCategories)]
     [HttpPost]
     [ProducesResponseType(typeof(CategoryDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<CategoryDto>> Create(CreateCategoryRequest request, CancellationToken ct)
@@ -26,12 +26,12 @@ public class CategoriesController : BaseApiController
         return CreatedAtAction(nameof(List), new { }, created);
     }
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageCategories)]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<CategoryDto>> Update(int id, UpdateCategoryRequest request, CancellationToken ct)
         => Ok(await _categories.UpdateAsync(id, request, ct));
 
-    [Authorize(Roles = Roles.Admin)]
+    [HasPermission(Permissions.ManageCategories)]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
