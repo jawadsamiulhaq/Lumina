@@ -151,6 +151,20 @@ public class AdminUserService : IAdminUserService
         return await ToDtoAsync(user);
     }
 
+    public async Task<AdminResetPasswordResultDto> ResetPasswordAsync(string userId, CancellationToken ct = default)
+    {
+        var user = await FindAsync(userId);
+        var tempPassword = TemporaryPassword.Generate();
+
+        // Reset via a freshly generated token so any existing password is replaced cleanly.
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, token, tempPassword);
+        if (!result.Succeeded)
+            throw new BadRequestException(string.Join(" ", result.Errors.Select(e => e.Description)));
+
+        return new AdminResetPasswordResultDto(user.Email ?? "", tempPassword);
+    }
+
     // ---- helpers ----
 
     private async Task<ApplicationUser> FindAsync(string userId) =>

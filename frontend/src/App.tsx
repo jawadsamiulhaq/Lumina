@@ -15,6 +15,8 @@ import { OrdersPage } from '@/pages/OrdersPage'
 import { OrderDetailPage } from '@/pages/OrderDetailPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 // Code-split the heavy / role-gated areas so the storefront's initial bundle
@@ -44,6 +46,8 @@ export function App() {
           <Route path="cart" element={<CartPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route path="checkout" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
           <Route path="checkout/success" element={<CheckoutSuccessPage />} />
           <Route path="checkout/cancel" element={<CheckoutCancelPage />} />

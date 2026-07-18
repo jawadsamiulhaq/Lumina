@@ -57,4 +57,9 @@ public class AdminUsersController : ControllerBase
     [HttpPost("{id}/unlock")]
     public async Task<ActionResult<AdminUserDto>> Unlock(string id, CancellationToken ct)
         => Ok(await _users.UnlockAsync(id, ct));
+
+    [HttpPost("{id}/reset-password")]
+    [ProducesResponseType(typeof(AdminResetPasswordResultDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AdminResetPasswordResultDto>> ResetPassword(string id, CancellationToken ct)
+        => Ok(await _users.ResetPasswordAsync(id, ct));
 }

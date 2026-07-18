@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { UserPlus, Lock, LockOpen, Pencil, Trash2, ShieldCheck, Eye } from 'lucide-react'
+import { UserPlus, Lock, LockOpen, Pencil, Trash2, ShieldCheck, Eye, KeyRound, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -10,7 +10,7 @@ import { toast } from '@/store/toastStore'
 import { useAdminUsers, useRoles, queryKeys } from '@/hooks/queries'
 import { adminApi } from '@/api/services'
 import type { CreateUserBody, UpdateUserBody } from '@/api/services'
-import type { AdminUser, Role } from '@/types/api'
+import type { AdminUser, AdminResetPasswordResult, Role } from '@/types/api'
 import { getApiErrorMessage } from '@/lib/api'
 import { roleTone } from '@/lib/rbac'
 
@@ -33,6 +33,8 @@ export function UsersTab() {
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState<AdminUser | 'new' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null)
+  const [confirmReset, setConfirmReset] = useState<AdminUser | null>(null)
+  const [resetResult, setResetResult] = useState<AdminResetPasswordResult | null>(null)
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: queryKeys.adminUsers })
@@ -47,6 +49,11 @@ export function UsersTab() {
   const deleteMut = useMutation({
     mutationFn: (id: string) => adminApi.deleteUser(id),
     onSuccess: () => { toast.success('User deleted.'); invalidate() },
+    onError: (e) => toast.error(getApiErrorMessage(e)),
+  })
+  const resetMut = useMutation({
+    mutationFn: (id: string) => adminApi.resetUserPassword(id),
+    onSuccess: (data) => { setConfirmReset(null); setResetResult(data) },
     onError: (e) => toast.error(getApiErrorMessage(e)),
   })
 
@@ -128,6 +135,7 @@ export function UsersTab() {
                       <div className="flex items-center justify-end gap-1">
                         <IconButton title="View" to={`/admin/users/${u.id}`}><Eye className="size-4" /></IconButton>
                         <IconButton title="Edit" onClick={() => setEditing(u)}><Pencil className="size-4" /></IconButton>
+                        <IconButton title="Reset password" onClick={() => setConfirmReset(u)}><KeyRound className="size-4 text-brand-600" /></IconButton>
                         {u.isLocked ? (
                           <IconButton title="Unlock" onClick={() => lockMut.mutate({ id: u.id, lock: false })}><LockOpen className="size-4 text-emerald-600" /></IconButton>
                         ) : (
@@ -160,7 +168,58 @@ export function UsersTab() {
       >
         <p className="text-sm text-ink-600">This permanently removes the account and can't be undone.</p>
       </Modal>
+
+      <Modal
+        open={!!confirmReset}
+        onClose={() => setConfirmReset(null)}
+        title="Reset password"
+        description={confirmReset ? `Generate a new temporary password for ${confirmReset.firstName} ${confirmReset.lastName}.` : ''}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmReset(null)}>Cancel</Button>
+            <Button loading={resetMut.isPending} onClick={() => { if (confirmReset) resetMut.mutate(confirmReset.id) }}>Generate password</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-ink-600">
+          Their current password stops working immediately. You'll get a one-time temporary password to share with them —
+          ask them to change it after signing in.
+        </p>
+      </Modal>
+
+      <ResetResultModal result={resetResult} onClose={() => setResetResult(null)} />
     </div>
+  )
+}
+
+function ResetResultModal({ result, onClose }: { result: AdminResetPasswordResult | null; onClose: () => void }) {
+  function copy() {
+    if (!result) return
+    void navigator.clipboard.writeText(result.temporaryPassword)
+    toast.success('Password copied.')
+  }
+  return (
+    <Modal
+      open={!!result}
+      onClose={onClose}
+      title="Temporary password"
+      description={result ? `Share this with ${result.email}. It won't be shown again.` : ''}
+      footer={<Button onClick={onClose}>Done</Button>}
+    >
+      {result && (
+        <div>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-ink-200 bg-ink-50 px-4 py-3">
+            <code className="select-all font-mono text-lg font-semibold tracking-wide text-ink-900">{result.temporaryPassword}</code>
+            <button onClick={copy} title="Copy" aria-label="Copy password" className="grid size-9 shrink-0 place-items-center rounded-lg text-ink-500 transition hover:bg-ink-100 hover:text-ink-900">
+              <Copy className="size-4" />
+            </button>
+          </div>
+          <p className="mt-3 text-sm text-ink-500">
+            For security, this password is stored only as a hash — copy it now, it can't be retrieved later.
+          </p>
+        </div>
+      )}
+    </Modal>
   )
 }
 

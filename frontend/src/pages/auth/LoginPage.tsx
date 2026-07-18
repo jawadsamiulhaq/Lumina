@@ -64,6 +64,9 @@ export function LoginPage() {
             <Field label="Password" error={errors.password?.message}>
               <Input type="password" autoComplete="current-password" placeholder="••••••••" {...register('password')} />
             </Field>
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-sm font-medium text-brand-600 hover:text-brand-700">Forgot password?</Link>
+            </div>
             <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
               Sign in
             </Button>

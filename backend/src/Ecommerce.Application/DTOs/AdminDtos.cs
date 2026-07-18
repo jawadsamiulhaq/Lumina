@@ -36,3 +36,6 @@ public record DashboardStatsDto(
     IReadOnlyList<OrderListItemDto> RecentOrders);
 
 public record UploadResultDto(string Url, string FileName, long SizeBytes);
+
+/// <summary>Returned once when an admin resets a user's password. The plaintext is shown a single time.</summary>
+public record AdminResetPasswordResultDto(string Email, string TemporaryPassword);

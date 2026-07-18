@@ -37,6 +37,21 @@ public class FrontendSettings
     public string BaseUrl { get; set; } = "http://localhost:5173";
 }
 
+public class EmailSettings
+{
+    public const string SectionName = "Email";
+
+    /// <summary>When false, emails are written to the logs instead of being sent (handy for local dev).</summary>
+    public bool Enabled { get; set; }
+    public string Host { get; set; } = string.Empty;
+    public int Port { get; set; } = 587;
+    public bool UseSsl { get; set; } = true;
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string FromEmail { get; set; } = "no-reply@lumina.local";
+    public string FromName { get; set; } = "Lumina";
+}
+
 public class PaymentSettings
 {
     public const string SectionName = "Payments";

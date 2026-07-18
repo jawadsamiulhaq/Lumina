@@ -263,6 +263,11 @@ export interface AdminUser {
   lockedUntil: string | null
 }
 
+export interface AdminResetPasswordResult {
+  email: string
+  temporaryPassword: string
+}
+
 export interface Role {
   id: string
   name: string

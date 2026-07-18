@@ -10,17 +10,13 @@ import { Field, Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/store/authStore'
 import { useCartStore } from '@/store/cartStore'
 import { getApiErrorMessage } from '@/lib/api'
+import { passwordSchema } from '@/lib/validation'
 
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Enter a valid email'),
-  password: z
-    .string()
-    .min(8, 'At least 8 characters')
-    .regex(/[A-Z]/, 'Add an uppercase letter')
-    .regex(/[a-z]/, 'Add a lowercase letter')
-    .regex(/[0-9]/, 'Add a number'),
+  password: passwordSchema,
 })
 type FormValues = z.infer<typeof schema>
 

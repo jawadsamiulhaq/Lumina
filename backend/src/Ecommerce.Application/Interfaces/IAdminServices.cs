@@ -13,6 +13,9 @@ public interface IAdminUserService
     Task<AdminUserDto> SetRolesAsync(string userId, IReadOnlyList<string> roles, CancellationToken ct = default);
     Task<AdminUserDto> LockAsync(string userId, int minutes, CancellationToken ct = default);
     Task<AdminUserDto> UnlockAsync(string userId, CancellationToken ct = default);
+
+    /// <summary>Generates a new temporary password for the user and returns it once (never stored in plaintext).</summary>
+    Task<AdminResetPasswordResultDto> ResetPasswordAsync(string userId, CancellationToken ct = default);
 }
 
 public interface IRoleService

@@ -4,8 +4,10 @@ using Ecommerce.Application.Interfaces;
 using Ecommerce.Domain.Constants;
 using Ecommerce.Infrastructure.Identity;
 using Ecommerce.Infrastructure.Persistence;
+using Ecommerce.Infrastructure.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Ecommerce.Infrastructure.Services;
 
@@ -14,12 +16,21 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokens;
     private readonly AppDbContext _db;
+    private readonly IEmailSender _email;
+    private readonly FrontendSettings _frontend;
 
-    public AuthService(UserManager<ApplicationUser> userManager, ITokenService tokens, AppDbContext db)
+    public AuthService(
+        UserManager<ApplicationUser> userManager,
+        ITokenService tokens,
+        AppDbContext db,
+        IEmailSender email,
+        IOptions<FrontendSettings> frontend)
     {
         _userManager = userManager;
         _tokens = tokens;
         _db = db;
+        _email = email;
+        _frontend = frontend.Value;
     }
 
     public async Task<AuthResult> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
@@ -103,6 +114,58 @@ public class AuthService : IAuthService
         var roles = await _userManager.GetRolesAsync(user);
         var permissions = await ResolvePermissionsAsync(roles, ct);
         return ToDto(user, roles, permissions);
+    }
+
+    public async Task ForgotPasswordAsync(string email, CancellationToken ct = default)
+    {
+        var user = await _userManager.FindByEmailAsync(email.Trim().ToLowerInvariant());
+        // Don't reveal whether the email exists — always behave the same to the caller.
+        if (user is null || string.IsNullOrEmpty(user.Email)) return;
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var link = $"{_frontend.BaseUrl.TrimEnd('/')}/reset-password" +
+                   $"?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(token)}";
+
+        var body =
+            $"<p>Hi {System.Net.WebUtility.HtmlEncode(user.FirstName)},</p>" +
+            "<p>We received a request to reset your password. Click the link below to choose a new one. " +
+            "If you didn't request this, you can safely ignore this email.</p>" +
+            $"<p><a href=\"{link}\">Reset your password</a></p>" +
+            "<p>This link will expire shortly for your security.</p>";
+
+        await _email.SendAsync(user.Email, "Reset your Lumina password", body, ct);
+    }
+
+    public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email.Trim().ToLowerInvariant());
+        // Use a generic error so this endpoint can't be used to enumerate accounts.
+        if (user is null)
+            throw new BadRequestException("This reset link is invalid or has expired.");
+
+        var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            var invalidToken = result.Errors.Any(e => e.Code == "InvalidToken");
+            throw new BadRequestException(invalidToken
+                ? "This reset link is invalid or has expired."
+                : string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+    }
+
+    public async Task ChangePasswordAsync(int userId, ChangePasswordRequest request, CancellationToken ct = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            var wrongCurrent = result.Errors.Any(e => e.Code == "PasswordMismatch");
+            throw new BadRequestException(wrongCurrent
+                ? "Your current password is incorrect."
+                : string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
     }
 
     // ---- helpers ----

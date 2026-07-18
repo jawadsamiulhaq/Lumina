@@ -4,6 +4,7 @@ import { Package, LogOut, ShieldCheck } from 'lucide-react'
 import { Seo } from '@/components/Seo'
 import { Container } from '@/components/Container'
 import { Button } from '@/components/ui/Button'
+import { ChangePasswordCard } from '@/components/account/ChangePasswordCard'
 import { useAuthStore } from '@/store/authStore'
 
 export function AccountPage() {
@@ -59,6 +60,8 @@ export function AccountPage() {
               )}
             </div>
           </motion.div>
+
+          <ChangePasswordCard />
         </div>
       </Container>
     </>

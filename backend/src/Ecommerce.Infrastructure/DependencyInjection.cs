@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.Configure<StorageSettings>(config.GetSection(StorageSettings.SectionName));
         services.Configure<FrontendSettings>(config.GetSection(FrontendSettings.SectionName));
         services.Configure<PaymentSettings>(config.GetSection(PaymentSettings.SectionName));
+        services.Configure<EmailSettings>(config.GetSection(EmailSettings.SectionName));
 
         // Database
         var connectionString = config.GetConnectionString("Default")
@@ -82,6 +83,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IFileStorage, LocalFileStorage>();
+        services.AddScoped<IEmailSender, EmailSender>();
         services.AddScoped<IStripeService, StripeService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IProductService, ProductService>();

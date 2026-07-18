@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import type {
   AdminUser,
+  AdminResetPasswordResult,
   AuthResponse,
   Cart,
   Category,
@@ -32,6 +33,11 @@ export const authApi = {
   refresh: () => api.post<AuthResponse>('/auth/refresh', {}).then((r) => r.data),
   logout: () => api.post('/auth/logout').then((r) => r.data),
   me: () => api.get<User>('/auth/me').then((r) => r.data),
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }).then((r) => r.data),
+  resetPassword: (body: { email: string; token: string; newPassword: string }) =>
+    api.post('/auth/reset-password', body).then((r) => r.data),
+  changePassword: (body: { currentPassword: string; newPassword: string }) =>
+    api.post('/auth/change-password', body).then((r) => r.data),
 }
 
 // ---- Products ----
@@ -119,6 +125,8 @@ export const adminApi = {
   lockUser: (id: string, minutes: number) =>
     api.post<AdminUser>(`/admin/users/${id}/lock`, { minutes }).then((r) => r.data),
   unlockUser: (id: string) => api.post<AdminUser>(`/admin/users/${id}/unlock`).then((r) => r.data),
+  resetUserPassword: (id: string) =>
+    api.post<AdminResetPasswordResult>(`/admin/users/${id}/reset-password`).then((r) => r.data),
   dashboard: () => api.get<DashboardStats>('/admin/dashboard').then((r) => r.data),
 }
 

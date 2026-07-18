@@ -64,6 +64,32 @@ public class AuthController : BaseApiController
         return Ok(await _auth.GetByIdAsync(userId, ct));
     }
 
+    /// <summary>Starts the self-service reset flow. Always returns 204 so it can't be used to probe for accounts.</summary>
+    [HttpPost("forgot-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken ct)
+    {
+        await _auth.ForgotPasswordAsync(request.Email, ct);
+        return NoContent();
+    }
+
+    [HttpPost("reset-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, CancellationToken ct)
+    {
+        await _auth.ResetPasswordAsync(request, ct);
+        return NoContent();
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
+    {
+        await _auth.ChangePasswordAsync(_currentUser.RequireUserId(), request, ct);
+        return NoContent();
+    }
+
     private ActionResult<AuthResponse> AuthOk(AuthResult result)
     {
         RefreshTokenCookie.Set(HttpContext, result.RefreshToken, result.RefreshTokenExpiresAt);
