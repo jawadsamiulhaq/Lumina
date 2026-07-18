@@ -41,6 +41,15 @@ public record OrderListItemDto(
     string Email,
     DateTime CreatedAt);
 
+/// <summary>Number of orders in each status, for the admin orders overview.</summary>
+public record OrderStatusCountsDto(
+    int Pending,
+    int Paid,
+    int Shipped,
+    int Delivered,
+    int Cancelled,
+    int Total);
+
 public class ShippingAddressInput
 {
     public string Email { get; set; } = string.Empty;

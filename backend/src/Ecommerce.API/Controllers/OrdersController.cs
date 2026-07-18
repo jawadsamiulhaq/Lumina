@@ -44,6 +44,11 @@ public class OrdersController : BaseApiController
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] OrderStatus? status = null, CancellationToken ct = default)
         => Ok(await _orders.GetAllAsync(page, pageSize, status, ct));
 
+    [HasPermission(Permissions.ViewOrderStats)]
+    [HttpGet("admin/stats")]
+    public async Task<ActionResult<OrderStatusCountsDto>> AdminStats(CancellationToken ct)
+        => Ok(await _orders.GetStatusCountsAsync(ct));
+
     [HasPermission(Permissions.ManageOrders)]
     [HttpGet("admin/{id:int}")]
     public async Task<ActionResult<OrderDto>> AdminGet(int id, CancellationToken ct)

@@ -18,6 +18,7 @@ public interface IOrderService
 
     // Admin
     Task<PagedResult<OrderListItemDto>> GetAllAsync(int page, int pageSize, OrderStatus? status, CancellationToken ct = default);
+    Task<OrderStatusCountsDto> GetStatusCountsAsync(CancellationToken ct = default);
     Task<OrderDto> GetByIdAsync(int id, CancellationToken ct = default);
     Task<OrderDto> UpdateStatusAsync(int id, OrderStatus status, CancellationToken ct = default);
 }

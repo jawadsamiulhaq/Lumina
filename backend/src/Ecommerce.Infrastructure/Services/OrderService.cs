@@ -193,6 +193,24 @@ public class OrderService : IOrderService
         return new PagedResult<OrderListItemDto>(items, page, pageSize, total);
     }
 
+    public async Task<OrderStatusCountsDto> GetStatusCountsAsync(CancellationToken ct = default)
+    {
+        var counts = await _db.Orders.AsNoTracking()
+            .GroupBy(o => o.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        int C(OrderStatus s) => counts.FirstOrDefault(x => x.Status == s)?.Count ?? 0;
+
+        return new OrderStatusCountsDto(
+            Pending: C(OrderStatus.Pending),
+            Paid: C(OrderStatus.Paid),
+            Shipped: C(OrderStatus.Shipped),
+            Delivered: C(OrderStatus.Delivered),
+            Cancelled: C(OrderStatus.Cancelled),
+            Total: counts.Sum(x => x.Count));
+    }
+
     public async Task<OrderDto> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var order = await LoadWithItems().FirstOrDefaultAsync(o => o.Id == id, ct)
