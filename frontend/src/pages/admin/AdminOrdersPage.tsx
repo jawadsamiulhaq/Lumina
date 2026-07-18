@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Input'
 import { Spinner, ErrorState, EmptyState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/order/OrderStatus'
+import { OrderStatusStats } from '@/components/order/OrderStatusStats'
 import { AdminOrderDetailInline } from '@/components/order/AdminOrderDetailInline'
 import { useAdminOrders } from '@/hooks/queries'
+import { useHasPermission } from '@/hooks/usePermission'
+import { PERM } from '@/lib/permissions'
 import type { OrderStatus } from '@/types/api'
 import { formatPrice, formatDate } from '@/lib/format'
 import { getApiErrorMessage } from '@/lib/api'
@@ -17,7 +20,14 @@ export function AdminOrdersPage() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<OrderStatus | 'All'>('All')
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const canViewStats = useHasPermission(PERM.orderStats)
   const { data, isLoading, isError, error, refetch } = useAdminOrders(page, status === 'All' ? undefined : status)
+
+  function selectStatus(next: OrderStatus | 'All') {
+    setStatus(next)
+    setPage(1)
+    setExpandedId(null)
+  }
 
   return (
     <div>
@@ -26,10 +36,16 @@ export function AdminOrdersPage() {
           <h1 className="text-2xl font-bold tracking-tight text-ink-900">Orders</h1>
           <p className="mt-1 text-sm text-ink-500">{data?.totalCount ?? 0} total</p>
         </div>
-        <Select value={status} onChange={(e) => { setStatus(e.target.value as OrderStatus | 'All'); setPage(1); setExpandedId(null) }} className="w-44">
+        <Select value={status} onChange={(e) => selectStatus(e.target.value as OrderStatus | 'All')} className="w-44">
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </Select>
       </div>
+
+      {canViewStats && (
+        <div className="mt-6">
+          <OrderStatusStats selected={status} onSelect={selectStatus} enabled={canViewStats} />
+        </div>
+      )}
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-ink-100 bg-white">
         {isLoading ? (

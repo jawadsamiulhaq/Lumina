@@ -161,6 +161,15 @@ export interface OrderListItem {
   createdAt: string
 }
 
+export interface OrderStatusCounts {
+  pending: number
+  paid: number
+  shipped: number
+  delivered: number
+  cancelled: number
+  total: number
+}
+
 export interface Review {
   id: number
   rating: number

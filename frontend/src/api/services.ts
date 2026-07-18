@@ -8,6 +8,7 @@ import type {
   DashboardStats,
   Order,
   OrderListItem,
+  OrderStatusCounts,
   OrderStatus,
   PagedResult,
   Permission,
@@ -78,6 +79,7 @@ export const ordersApi = {
   // admin
   adminList: (page = 1, pageSize = 20, status?: OrderStatus) =>
     api.get<PagedResult<OrderListItem>>('/orders/admin', { params: { page, pageSize, status } }).then((r) => r.data),
+  adminStats: () => api.get<OrderStatusCounts>('/orders/admin/stats').then((r) => r.data),
   adminGet: (id: number) => api.get<Order>(`/orders/admin/${id}`).then((r) => r.data),
   updateStatus: (id: number, status: OrderStatus) =>
     api.put<Order>(`/orders/admin/${id}/status`, { status }).then((r) => r.data),

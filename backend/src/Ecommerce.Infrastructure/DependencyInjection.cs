@@ -28,7 +28,15 @@ public static class DependencyInjection
         var connectionString = config.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Connection string 'Default' is not configured.");
         services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+            options.UseSqlServer(connectionString, sql =>
+            {
+                sql.EnableRetryOnFailure();
+                // Queries that pull several one-to-many collections (e.g. a product with its
+                // images, options and variants) would otherwise run as one big JOIN and cause a
+                // cartesian explosion. Splitting them into one query per collection avoids that
+                // and silences EF's MultipleCollectionIncludeWarning.
+                sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+            }));
 
         // Identity
         services.AddIdentityCore<ApplicationUser>(options =>

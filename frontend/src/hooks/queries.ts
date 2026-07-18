@@ -11,6 +11,7 @@ export const queryKeys = {
   myOrder: (id: number) => ['my-order', id] as const,
   adminOrders: (page: number, status?: OrderStatus) => ['admin-orders', page, status] as const,
   adminOrder: (id: number) => ['admin-order', id] as const,
+  adminOrderStats: ['admin-order-stats'] as const,
   adminProducts: (params: ProductQueryParams) => ['admin-products', params] as const,
   adminUsers: ['admin-users'] as const,
   roles: ['admin-roles'] as const,
@@ -104,4 +105,8 @@ export function useAdminOrders(page: number, status?: OrderStatus) {
 
 export function useAdminOrder(id: number) {
   return useQuery({ queryKey: queryKeys.adminOrder(id), queryFn: () => ordersApi.adminGet(id), enabled: id > 0 })
+}
+
+export function useAdminOrderStats(enabled = true) {
+  return useQuery({ queryKey: queryKeys.adminOrderStats, queryFn: ordersApi.adminStats, enabled })
 }

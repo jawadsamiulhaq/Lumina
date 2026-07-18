@@ -4,6 +4,7 @@ export const PERM = {
   products: 'products.manage',
   categories: 'categories.manage',
   orders: 'orders.manage',
+  orderStats: 'orders.stats',
   users: 'users.manage',
 } as const
 
