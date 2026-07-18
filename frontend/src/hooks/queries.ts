@@ -26,6 +26,22 @@ export function useProducts(params: ProductQueryParams) {
   })
 }
 
+/**
+ * Live product suggestions for the search typeahead. Kept intentionally small
+ * (few results) and only fires once the term is meaningful, so it stays snappy
+ * even when many products share a prefix (e.g. everything starting with "ho…").
+ */
+export function useProductSearch(term: string, limit = 6) {
+  const query = term.trim()
+  return useQuery({
+    queryKey: ['product-search', query, limit] as const,
+    queryFn: () => productsApi.list({ search: query, page: 1, pageSize: limit, sort: 'NameAsc' }),
+    enabled: query.length >= 2,
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+  })
+}
+
 export function useProduct(slug: string) {
   return useQuery({
     queryKey: queryKeys.product(slug),

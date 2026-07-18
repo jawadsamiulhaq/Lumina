@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ShoppingBag, Search, User, Menu, X, LayoutDashboard, LogOut, Package } from 'lucide-react'
+import { ShoppingBag, User, Menu, X, LayoutDashboard, LogOut, Package } from 'lucide-react'
+import { SearchBar } from '@/components/search/SearchBar'
 import { useAuthStore } from '@/store/authStore'
 import { useCartStore } from '@/store/cartStore'
 import { useFlyStore } from '@/store/flyStore'
@@ -10,11 +11,9 @@ import { useCanAccessAdmin } from '@/hooks/usePermission'
 import { cn } from '@/lib/utils'
 
 export function Navbar() {
-  const navigate = useNavigate()
   const cartBtnRef = useRef<HTMLButtonElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
-  const [term, setTerm] = useState('')
 
   const { user, status, logout } = useAuthStore()
   const canAccessAdmin = useCanAccessAdmin()
@@ -28,12 +27,6 @@ export function Navbar() {
     registerCartTarget(() => cartBtnRef.current?.getBoundingClientRect() ?? null)
     return () => registerCartTarget(null)
   }, [registerCartTarget])
-
-  function submitSearch(e: React.FormEvent) {
-    e.preventDefault()
-    navigate(term.trim() ? `/products?search=${encodeURIComponent(term.trim())}` : '/products')
-    setMenuOpen(false)
-  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink-100 bg-white/80 backdrop-blur-xl">
@@ -54,17 +47,9 @@ export function Navbar() {
           ))}
         </nav>
 
-        <form onSubmit={submitSearch} className="ml-auto hidden max-w-xs flex-1 items-center md:flex">
-          <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" />
-            <input
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              placeholder="Search products…"
-              className="w-full rounded-full border border-ink-200 bg-ink-50 py-2 pl-9 pr-4 text-sm focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-100"
-            />
-          </div>
-        </form>
+        <div className="ml-auto hidden max-w-xs flex-1 items-center md:flex">
+          <SearchBar />
+        </div>
 
         <div className="ml-auto flex items-center gap-1 md:ml-0">
           {/* Account */}
@@ -153,15 +138,7 @@ export function Navbar() {
             className="overflow-hidden border-t border-ink-100 lg:hidden"
           >
             <div className="space-y-2 px-4 py-4">
-              <form onSubmit={submitSearch} className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" />
-                <input
-                  value={term}
-                  onChange={(e) => setTerm(e.target.value)}
-                  placeholder="Search products…"
-                  className="w-full rounded-full border border-ink-200 bg-ink-50 py-2.5 pl-9 pr-4 text-sm focus:outline-none"
-                />
-              </form>
+              <SearchBar onNavigate={() => setMenuOpen(false)} />
               <div className="flex flex-col">
                 <MobileLink to="/products" label="Shop all" onClick={() => setMenuOpen(false)} />
                 {categories?.map((c) => (
