@@ -207,6 +207,8 @@ export interface AuthResponse {
   accessToken: string
   accessTokenExpiresAt: string
   user: User
+  isImpersonating: boolean
+  impersonatorName: string | null
 }
 
 export interface ProductImageInput {

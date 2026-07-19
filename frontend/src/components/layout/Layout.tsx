@@ -2,6 +2,7 @@ import { useLocation, useOutlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
+import { ImpersonationBanner } from './ImpersonationBanner'
 import { CartDrawer } from '@/components/cart/CartDrawer'
 import { FlyToCartLayer } from '@/components/cart/FlyToCartLayer'
 import { Toaster } from '@/components/ui/Toaster'
@@ -13,6 +14,7 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <ImpersonationBanner />
       <Navbar />
       <main className="flex-1">
         <AnimatePresence mode="wait">

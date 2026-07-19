@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { authApi } from '@/api/services'
+import { authApi, adminApi } from '@/api/services'
 import { setAccessToken } from '@/lib/token'
 import type { AuthResponse, User } from '@/types/api'
 
@@ -9,53 +9,71 @@ interface AuthState {
   user: User | null
   status: AuthStatus
   isAdmin: boolean
+  isImpersonating: boolean
+  impersonatorName: string | null
   bootstrap: () => Promise<void>
   applyAuth: (auth: AuthResponse) => void
   login: (email: string, password: string) => Promise<void>
   register: (body: { email: string; password: string; firstName: string; lastName: string }) => Promise<void>
   logout: () => Promise<void>
+  impersonate: (userId: string) => Promise<void>
+  stopImpersonating: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  status: 'loading',
-  isAdmin: false,
-
-  applyAuth: (auth) => {
+export const useAuthStore = create<AuthState>((set) => {
+  const apply = (auth: AuthResponse) => {
     setAccessToken(auth.accessToken)
-    set({ user: auth.user, status: 'authenticated', isAdmin: auth.user.roles.includes('Admin') })
-  },
+    set({
+      user: auth.user,
+      status: 'authenticated',
+      isAdmin: auth.user.roles.includes('Admin'),
+      isImpersonating: auth.isImpersonating,
+      impersonatorName: auth.impersonatorName,
+    })
+  }
 
-  bootstrap: async () => {
-    try {
-      // Try to obtain a fresh access token from the httpOnly refresh cookie
-      const auth = await authApi.refresh()
-      setAccessToken(auth.accessToken)
-      set({ user: auth.user, status: 'authenticated', isAdmin: auth.user.roles.includes('Admin') })
-    } catch {
-      setAccessToken(null)
-      set({ user: null, status: 'unauthenticated', isAdmin: false })
-    }
-  },
+  return {
+    user: null,
+    status: 'loading',
+    isAdmin: false,
+    isImpersonating: false,
+    impersonatorName: null,
 
-  login: async (email, password) => {
-    const auth = await authApi.login({ email, password })
-    setAccessToken(auth.accessToken)
-    set({ user: auth.user, status: 'authenticated', isAdmin: auth.user.roles.includes('Admin') })
-  },
+    applyAuth: apply,
 
-  register: async (body) => {
-    const auth = await authApi.register(body)
-    setAccessToken(auth.accessToken)
-    set({ user: auth.user, status: 'authenticated', isAdmin: auth.user.roles.includes('Admin') })
-  },
+    bootstrap: async () => {
+      try {
+        // Try to obtain a fresh access token from the httpOnly refresh cookie
+        apply(await authApi.refresh())
+      } catch {
+        setAccessToken(null)
+        set({ user: null, status: 'unauthenticated', isAdmin: false, isImpersonating: false, impersonatorName: null })
+      }
+    },
 
-  logout: async () => {
-    try {
-      await authApi.logout()
-    } finally {
-      setAccessToken(null)
-      set({ user: null, status: 'unauthenticated', isAdmin: false })
-    }
-  },
-}))
+    login: async (email, password) => {
+      apply(await authApi.login({ email, password }))
+    },
+
+    register: async (body) => {
+      apply(await authApi.register(body))
+    },
+
+    logout: async () => {
+      try {
+        await authApi.logout()
+      } finally {
+        setAccessToken(null)
+        set({ user: null, status: 'unauthenticated', isAdmin: false, isImpersonating: false, impersonatorName: null })
+      }
+    },
+
+    impersonate: async (userId) => {
+      apply(await adminApi.impersonateUser(userId))
+    },
+
+    stopImpersonating: async () => {
+      apply(await authApi.stopImpersonation())
+    },
+  }
+})

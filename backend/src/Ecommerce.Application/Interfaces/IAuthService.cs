@@ -14,4 +14,10 @@ public interface IAuthService
     Task ForgotPasswordAsync(string email, CancellationToken ct = default);
     Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default);
     Task ChangePasswordAsync(int userId, ChangePasswordRequest request, CancellationToken ct = default);
+
+    /// <summary>Issues a session for <paramref name="targetUserId"/> tagged as being impersonated by <paramref name="impersonatorId"/>.</summary>
+    Task<AuthResult> ImpersonateAsync(int targetUserId, int impersonatorId, CancellationToken ct = default);
+
+    /// <summary>Ends an impersonation session and returns a normal session for the original admin.</summary>
+    Task<AuthResult> StopImpersonationAsync(int impersonatorId, string rawRefreshToken, CancellationToken ct = default);
 }

@@ -16,7 +16,7 @@ public class TokenService : ITokenService
 
     public TokenService(IOptions<JwtSettings> settings) => _settings = settings.Value;
 
-    public AccessToken CreateAccessToken(string userId, string email, IEnumerable<string> roles, IEnumerable<string> permissions)
+    public AccessToken CreateAccessToken(string userId, string email, IEnumerable<string> roles, IEnumerable<string> permissions, int? impersonatorId = null)
     {
         var now = DateTime.UtcNow;
         var expires = now.AddMinutes(_settings.AccessTokenMinutes);
@@ -30,6 +30,8 @@ public class TokenService : ITokenService
         };
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
         claims.AddRange(permissions.Distinct().Select(p => new Claim(Permissions.ClaimType, p)));
+        if (impersonatorId is int adminId)
+            claims.Add(new Claim(Permissions.ImpersonatorClaim, adminId.ToString()));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

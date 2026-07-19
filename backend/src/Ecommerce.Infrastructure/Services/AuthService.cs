@@ -7,6 +7,7 @@ using Ecommerce.Infrastructure.Persistence;
 using Ecommerce.Infrastructure.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Ecommerce.Infrastructure.Services;
@@ -18,19 +19,22 @@ public class AuthService : IAuthService
     private readonly AppDbContext _db;
     private readonly IEmailSender _email;
     private readonly FrontendSettings _frontend;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         ITokenService tokens,
         AppDbContext db,
         IEmailSender email,
-        IOptions<FrontendSettings> frontend)
+        IOptions<FrontendSettings> frontend,
+        ILogger<AuthService> logger)
     {
         _userManager = userManager;
         _tokens = tokens;
         _db = db;
         _email = email;
         _frontend = frontend.Value;
+        _logger = logger;
     }
 
     public async Task<AuthResult> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
@@ -89,10 +93,71 @@ public class AuthService : IAuthService
             throw new UnauthorizedException("This account is temporarily locked. Please try again later.");
         }
 
+        // Preserve an impersonation session across refreshes so the admin stays "inside" the user.
+        int? impersonatorId = stored.ImpersonatorId;
+        string? impersonatorName = null;
+        if (impersonatorId is int adminId)
+        {
+            var admin = await _userManager.FindByIdAsync(adminId.ToString());
+            if (admin is null)
+                impersonatorId = null; // admin gone — fall back to a normal session
+            else
+                impersonatorName = DisplayName(admin);
+        }
+
         // Rotate: revoke the used token and issue a new one
         stored.RevokedAt = DateTime.UtcNow;
-        var result = await BuildAuthResultAsync(user, ct, replacing: stored);
+        var result = await BuildAuthResultAsync(user, ct, replacing: stored, impersonatorId: impersonatorId, impersonatorName: impersonatorName);
         return result;
+    }
+
+    public async Task<AuthResult> ImpersonateAsync(int targetUserId, int impersonatorId, CancellationToken ct = default)
+    {
+        if (targetUserId == impersonatorId)
+            throw new BadRequestException("You can't impersonate yourself.");
+
+        var target = await _userManager.FindByIdAsync(targetUserId.ToString())
+            ?? throw new NotFoundException("User", targetUserId);
+
+        // Never allow impersonating another administrator — that would be a privilege-escalation path.
+        if (await _userManager.IsInRoleAsync(target, Roles.Admin))
+            throw new BadRequestException("Administrators can't be impersonated.");
+
+        if (await _userManager.IsLockedOutAsync(target))
+            throw new BadRequestException("This account is locked and can't be impersonated.");
+
+        var admin = await _userManager.FindByIdAsync(impersonatorId.ToString())
+            ?? throw new UnauthorizedException("Your account no longer exists.");
+
+        _logger.LogWarning("Impersonation started: admin {AdminId} ({AdminEmail}) is now acting as user {UserId} ({UserEmail}).",
+            admin.Id, admin.Email, target.Id, target.Email);
+
+        return await BuildAuthResultAsync(target, ct, impersonatorId: admin.Id, impersonatorName: DisplayName(admin));
+    }
+
+    public async Task<AuthResult> StopImpersonationAsync(int impersonatorId, string rawRefreshToken, CancellationToken ct = default)
+    {
+        var admin = await _userManager.FindByIdAsync(impersonatorId.ToString())
+            ?? throw new UnauthorizedException("Your account no longer exists.");
+
+        // Revoke the impersonation refresh token so it can't be reused.
+        if (!string.IsNullOrWhiteSpace(rawRefreshToken))
+        {
+            var hash = _tokens.HashRefreshToken(rawRefreshToken);
+            var stored = await _db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
+            if (stored is not null && stored.RevokedAt is null)
+                stored.RevokedAt = DateTime.UtcNow;
+        }
+
+        _logger.LogWarning("Impersonation ended: admin {AdminId} ({AdminEmail}) returned to their own account.", admin.Id, admin.Email);
+
+        return await BuildAuthResultAsync(admin, ct);
+    }
+
+    private static string DisplayName(ApplicationUser user)
+    {
+        var name = $"{user.FirstName} {user.LastName}".Trim();
+        return string.IsNullOrEmpty(name) ? user.Email ?? "your account" : name;
     }
 
     public async Task RevokeAsync(string rawRefreshToken, CancellationToken ct = default)
@@ -188,11 +253,16 @@ public class AuthService : IAuthService
             .ToListAsync(ct);
     }
 
-    private async Task<AuthResult> BuildAuthResultAsync(ApplicationUser user, CancellationToken ct, RefreshToken? replacing = null)
+    private async Task<AuthResult> BuildAuthResultAsync(
+        ApplicationUser user,
+        CancellationToken ct,
+        RefreshToken? replacing = null,
+        int? impersonatorId = null,
+        string? impersonatorName = null)
     {
         var roles = await _userManager.GetRolesAsync(user);
         var permissions = await ResolvePermissionsAsync(roles, ct);
-        var access = _tokens.CreateAccessToken(user.Id.ToString(), user.Email!, roles, permissions);
+        var access = _tokens.CreateAccessToken(user.Id.ToString(), user.Email!, roles, permissions, impersonatorId);
 
         var rawRefresh = _tokens.CreateRefreshToken();
         var refreshHash = _tokens.HashRefreshToken(rawRefresh);
@@ -206,11 +276,15 @@ public class AuthService : IAuthService
             UserId = user.Id,
             TokenHash = refreshHash,
             ExpiresAt = refreshExpiry,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            ImpersonatorId = impersonatorId
         });
         await _db.SaveChangesAsync(ct);
 
-        return new AuthResult(access.Token, access.ExpiresAt, rawRefresh, refreshExpiry, ToDto(user, roles, permissions));
+        return new AuthResult(
+            access.Token, access.ExpiresAt, rawRefresh, refreshExpiry, ToDto(user, roles, permissions),
+            IsImpersonating: impersonatorId is not null,
+            ImpersonatorName: impersonatorName);
     }
 
     private static UserDto ToDto(ApplicationUser user, IEnumerable<string> roles, IEnumerable<string> permissions) =>

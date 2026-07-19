@@ -38,6 +38,7 @@ export const authApi = {
     api.post('/auth/reset-password', body).then((r) => r.data),
   changePassword: (body: { currentPassword: string; newPassword: string }) =>
     api.post('/auth/change-password', body).then((r) => r.data),
+  stopImpersonation: () => api.post<AuthResponse>('/auth/stop-impersonation', {}).then((r) => r.data),
 }
 
 // ---- Products ----
@@ -127,6 +128,8 @@ export const adminApi = {
   unlockUser: (id: string) => api.post<AdminUser>(`/admin/users/${id}/unlock`).then((r) => r.data),
   resetUserPassword: (id: string) =>
     api.post<AdminResetPasswordResult>(`/admin/users/${id}/reset-password`).then((r) => r.data),
+  impersonateUser: (id: string) =>
+    api.post<AuthResponse>(`/admin/users/${id}/impersonate`, {}).then((r) => r.data),
   dashboard: () => api.get<DashboardStats>('/admin/dashboard').then((r) => r.data),
 }
 

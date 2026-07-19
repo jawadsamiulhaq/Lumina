@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Ecommerce.Application.Common;
 using Ecommerce.Application.Interfaces;
+using Ecommerce.Domain.Constants;
 using Microsoft.AspNetCore.Http;
 
 namespace Ecommerce.Infrastructure.Services;
@@ -19,6 +20,9 @@ public class CurrentUserService : ICurrentUserService
             : null;
 
     public string? Email => User?.FindFirstValue(ClaimTypes.Email);
+
+    public int? ImpersonatorId =>
+        int.TryParse(User?.FindFirstValue(Permissions.ImpersonatorClaim), out var id) ? id : null;
 
     public bool IsAuthenticated => User?.Identity?.IsAuthenticated ?? false;
 

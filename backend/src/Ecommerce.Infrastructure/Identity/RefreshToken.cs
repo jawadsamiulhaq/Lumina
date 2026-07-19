@@ -15,5 +15,8 @@ public class RefreshToken
     public DateTime? RevokedAt { get; set; }
     public string? ReplacedByTokenHash { get; set; }
 
+    /// <summary>Set when this token belongs to an impersonation session: the admin who started it.</summary>
+    public int? ImpersonatorId { get; set; }
+
     public bool IsActive => RevokedAt is null && DateTime.UtcNow < ExpiresAt;
 }

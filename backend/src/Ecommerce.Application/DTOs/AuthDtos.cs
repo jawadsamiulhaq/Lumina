@@ -49,10 +49,14 @@ public record AuthResult(
     DateTime AccessTokenExpiresAt,
     string RefreshToken,
     DateTime RefreshTokenExpiresAt,
-    UserDto User);
+    UserDto User,
+    bool IsImpersonating = false,
+    string? ImpersonatorName = null);
 
 /// <summary>Body returned to the client (no refresh token — that lives in the cookie).</summary>
 public record AuthResponse(
     string AccessToken,
     DateTime AccessTokenExpiresAt,
-    UserDto User);
+    UserDto User,
+    bool IsImpersonating = false,
+    string? ImpersonatorName = null);

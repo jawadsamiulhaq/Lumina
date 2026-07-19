@@ -1,4 +1,5 @@
 using Ecommerce.API.Extensions;
+using Ecommerce.Application.Common;
 using Ecommerce.Application.DTOs;
 using Ecommerce.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -90,9 +91,21 @@ public class AuthController : BaseApiController
         return NoContent();
     }
 
+    [Authorize]
+    [HttpPost("stop-impersonation")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AuthResponse>> StopImpersonation(CancellationToken ct)
+    {
+        var impersonatorId = _currentUser.ImpersonatorId
+            ?? throw new BadRequestException("You are not impersonating anyone.");
+        var token = RefreshTokenCookie.Get(HttpContext) ?? string.Empty;
+        var result = await _auth.StopImpersonationAsync(impersonatorId, token, ct);
+        return AuthOk(result);
+    }
+
     private ActionResult<AuthResponse> AuthOk(AuthResult result)
     {
         RefreshTokenCookie.Set(HttpContext, result.RefreshToken, result.RefreshTokenExpiresAt);
-        return Ok(new AuthResponse(result.AccessToken, result.AccessTokenExpiresAt, result.User));
+        return Ok(new AuthResponse(result.AccessToken, result.AccessTokenExpiresAt, result.User, result.IsImpersonating, result.ImpersonatorName));
     }
 }

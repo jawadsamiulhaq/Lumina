@@ -1,4 +1,5 @@
 using Ecommerce.API.Authorization;
+using Ecommerce.API.Extensions;
 using Ecommerce.Application.DTOs;
 using Ecommerce.Application.Interfaces;
 using Ecommerce.Domain.Constants;
@@ -13,8 +14,15 @@ namespace Ecommerce.API.Controllers;
 public class AdminUsersController : ControllerBase
 {
     private readonly IAdminUserService _users;
+    private readonly IAuthService _auth;
+    private readonly ICurrentUserService _currentUser;
 
-    public AdminUsersController(IAdminUserService users) => _users = users;
+    public AdminUsersController(IAdminUserService users, IAuthService auth, ICurrentUserService currentUser)
+    {
+        _users = users;
+        _auth = auth;
+        _currentUser = currentUser;
+    }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<AdminUserDto>), StatusCodes.Status200OK)]
@@ -62,4 +70,14 @@ public class AdminUsersController : ControllerBase
     [ProducesResponseType(typeof(AdminResetPasswordResultDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminResetPasswordResultDto>> ResetPassword(string id, CancellationToken ct)
         => Ok(await _users.ResetPasswordAsync(id, ct));
+
+    [HasPermission(Permissions.ImpersonateUsers)]
+    [HttpPost("{id:int}/impersonate")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AuthResponse>> Impersonate(int id, CancellationToken ct)
+    {
+        var result = await _auth.ImpersonateAsync(id, _currentUser.RequireUserId(), ct);
+        RefreshTokenCookie.Set(HttpContext, result.RefreshToken, result.RefreshTokenExpiresAt);
+        return Ok(new AuthResponse(result.AccessToken, result.AccessTokenExpiresAt, result.User, result.IsImpersonating, result.ImpersonatorName));
+    }
 }

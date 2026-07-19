@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { UserPlus, Lock, LockOpen, Pencil, Trash2, ShieldCheck, Eye, KeyRound, Copy } from 'lucide-react'
+import { UserPlus, Lock, LockOpen, Pencil, Trash2, ShieldCheck, Eye, KeyRound, Copy, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -13,6 +13,8 @@ import type { CreateUserBody, UpdateUserBody } from '@/api/services'
 import type { AdminUser, AdminResetPasswordResult, Role } from '@/types/api'
 import { getApiErrorMessage } from '@/lib/api'
 import { roleTone } from '@/lib/rbac'
+import { useAuthStore } from '@/store/authStore'
+import { useCartStore } from '@/store/cartStore'
 
 const LOCK_MINUTES = 5
 
@@ -27,14 +29,20 @@ function useNow(active: boolean) {
 
 export function UsersTab() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const { data: users, isLoading, isError, error, refetch } = useAdminUsers()
   const { data: roles } = useRoles()
+
+  const currentUserId = useAuthStore((s) => s.user?.id)
+  const impersonate = useAuthStore((s) => s.impersonate)
+  const refreshCart = useCartStore((s) => s.refresh)
 
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState<AdminUser | 'new' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null)
   const [confirmReset, setConfirmReset] = useState<AdminUser | null>(null)
   const [resetResult, setResetResult] = useState<AdminResetPasswordResult | null>(null)
+  const [confirmImpersonate, setConfirmImpersonate] = useState<AdminUser | null>(null)
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: queryKeys.adminUsers })
@@ -54,6 +62,11 @@ export function UsersTab() {
   const resetMut = useMutation({
     mutationFn: (id: string) => adminApi.resetUserPassword(id),
     onSuccess: (data) => { setConfirmReset(null); setResetResult(data) },
+    onError: (e) => toast.error(getApiErrorMessage(e)),
+  })
+  const impersonateMut = useMutation({
+    mutationFn: async (id: string) => { await impersonate(id); await refreshCart() },
+    onSuccess: () => { setConfirmImpersonate(null); toast.success('Now viewing the store as this user.'); navigate('/') },
     onError: (e) => toast.error(getApiErrorMessage(e)),
   })
 
@@ -136,6 +149,9 @@ export function UsersTab() {
                         <IconButton title="View" to={`/admin/users/${u.id}`}><Eye className="size-4" /></IconButton>
                         <IconButton title="Edit" onClick={() => setEditing(u)}><Pencil className="size-4" /></IconButton>
                         <IconButton title="Reset password" onClick={() => setConfirmReset(u)}><KeyRound className="size-4 text-brand-600" /></IconButton>
+                        {!u.roles.includes('Admin') && u.id !== currentUserId && (
+                          <IconButton title="Impersonate" onClick={() => setConfirmImpersonate(u)}><UserCog className="size-4 text-indigo-600" /></IconButton>
+                        )}
                         {u.isLocked ? (
                           <IconButton title="Unlock" onClick={() => lockMut.mutate({ id: u.id, lock: false })}><LockOpen className="size-4 text-emerald-600" /></IconButton>
                         ) : (
@@ -188,6 +204,24 @@ export function UsersTab() {
       </Modal>
 
       <ResetResultModal result={resetResult} onClose={() => setResetResult(null)} />
+
+      <Modal
+        open={!!confirmImpersonate}
+        onClose={() => setConfirmImpersonate(null)}
+        title="Impersonate user"
+        description={confirmImpersonate ? `Browse the store as ${confirmImpersonate.firstName} ${confirmImpersonate.lastName}.` : ''}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmImpersonate(null)}>Cancel</Button>
+            <Button loading={impersonateMut.isPending} onClick={() => { if (confirmImpersonate) impersonateMut.mutate(confirmImpersonate.id) }}>Start impersonating</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-ink-600">
+          You'll see the site exactly as they do — their cart, orders and account. A banner stays on screen the whole time,
+          and you can return to your admin account with one click. Actions you take will be performed as this user.
+        </p>
+      </Modal>
     </div>
   )
 }
