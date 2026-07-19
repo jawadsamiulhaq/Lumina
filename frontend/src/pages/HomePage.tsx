@@ -6,6 +6,7 @@ import { Container } from '@/components/Container'
 import { ProductGrid } from '@/components/product/ProductGrid'
 import { ProductGridSkeleton } from '@/components/ui/Skeleton'
 import { Button } from '@/components/ui/Button'
+import { OffersSection } from '@/components/offers/OffersSection'
 import { useProducts, useCategories } from '@/hooks/queries'
 import { fadeInUp, staggerContainer, easeOut } from '@/lib/motion'
 
@@ -61,6 +62,9 @@ export function HomePage() {
           </motion.div>
         </Container>
       </section>
+
+      {/* Time-limited offers */}
+      <OffersSection />
 
       {/* Trust bar */}
       <Container>

@@ -14,6 +14,7 @@ public static class Permissions
 
     public const string ManageProducts = "products.manage";
     public const string ManageCategories = "categories.manage";
+    public const string ManageOffers = "offers.manage";
     public const string ManageOrders = "orders.manage";
     public const string ManageUsers = "users.manage";
     public const string ImpersonateUsers = "users.impersonate";
@@ -28,6 +29,7 @@ public static class Permissions
     {
         (ManageProducts, "Create, update and delete products"),
         (ManageCategories, "Create, update and delete categories"),
+        (ManageOffers, "Create, update and delete promotional offers"),
         (ManageOrders, "View all orders and update their status"),
         (ManageUsers, "View users and change their roles"),
         (ImpersonateUsers, "Sign in as another (non-admin) user"),
@@ -40,7 +42,7 @@ public static class Permissions
 
     public static readonly string[] Admin =
     {
-        ManageProducts, ManageCategories, ManageOrders, ManageUsers, ImpersonateUsers, ViewDashboard, ViewOrders, ViewOrderStats, ManageSettings, WriteReviews,
+        ManageProducts, ManageCategories, ManageOffers, ManageOrders, ManageUsers, ImpersonateUsers, ViewDashboard, ViewOrders, ViewOrderStats, ManageSettings, WriteReviews,
     };
 
     public static readonly string[] Customer =

@@ -1,11 +1,14 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { categoriesApi, ordersApi, productsApi, reviewsApi, adminApi, rolesApi } from '@/api/services'
+import { categoriesApi, offersApi, ordersApi, productsApi, reviewsApi, adminApi, rolesApi } from '@/api/services'
 import type { OrderStatus, ProductQueryParams } from '@/types/api'
 
 export const queryKeys = {
   products: (params: ProductQueryParams) => ['products', params] as const,
   product: (slug: string) => ['product', slug] as const,
   categories: ['categories'] as const,
+  offers: ['offers'] as const,
+  adminOffers: ['admin-offers'] as const,
+  adminOffer: (id: number) => ['admin-offer', id] as const,
   reviews: (slug: string) => ['reviews', slug] as const,
   myOrders: (page: number) => ['my-orders', page] as const,
   myOrder: (id: number) => ['my-order', id] as const,
@@ -53,6 +56,18 @@ export function useProduct(slug: string) {
 
 export function useCategories() {
   return useQuery({ queryKey: queryKeys.categories, queryFn: categoriesApi.list, staleTime: 5 * 60 * 1000 })
+}
+
+export function useOffers() {
+  return useQuery({ queryKey: queryKeys.offers, queryFn: offersApi.list, staleTime: 60 * 1000 })
+}
+
+export function useAdminOffers() {
+  return useQuery({ queryKey: queryKeys.adminOffers, queryFn: offersApi.adminList })
+}
+
+export function useAdminOffer(id: number) {
+  return useQuery({ queryKey: queryKeys.adminOffer(id), queryFn: () => offersApi.adminGet(id), enabled: id > 0 })
 }
 
 export function useReviews(slug: string) {

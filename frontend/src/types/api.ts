@@ -279,6 +279,40 @@ export interface EmailTemplate {
   updatedAt: string
 }
 
+export interface Offer {
+  id: number
+  title: string
+  subtitle: string | null
+  discountLabel: string | null
+  imageUrl: string | null
+  ctaText: string
+  ctaUrl: string
+  startsAt: string
+  endsAt: string
+}
+
+export type OfferStatus = 'Active' | 'Scheduled' | 'Expired' | 'Disabled'
+
+export interface AdminOffer extends Offer {
+  isActive: boolean
+  sortOrder: number
+  status: OfferStatus
+  createdAt: string
+}
+
+export interface OfferInput {
+  title: string
+  subtitle?: string | null
+  discountLabel?: string | null
+  imageUrl?: string | null
+  ctaText: string
+  ctaUrl: string
+  startsAt: string
+  endsAt: string
+  isActive: boolean
+  sortOrder: number
+}
+
 export type EmailStatus = 'Sent' | 'Logged' | 'Failed'
 
 export interface EmailLogListItem {

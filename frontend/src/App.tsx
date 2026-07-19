@@ -29,6 +29,8 @@ const AdminProductsPage = lazyNamed(() => import('@/pages/admin/AdminProductsPag
 const AdminProductFormPage = lazyNamed(() => import('@/pages/admin/AdminProductFormPage'), 'AdminProductFormPage')
 const AdminCategoriesPage = lazyNamed(() => import('@/pages/admin/AdminCategoriesPage'), 'AdminCategoriesPage')
 const AdminCategoryFormPage = lazyNamed(() => import('@/pages/admin/AdminCategoryFormPage'), 'AdminCategoryFormPage')
+const AdminOffersPage = lazyNamed(() => import('@/pages/admin/AdminOffersPage'), 'AdminOffersPage')
+const AdminOfferFormPage = lazyNamed(() => import('@/pages/admin/AdminOfferFormPage'), 'AdminOfferFormPage')
 const AdminOrdersPage = lazyNamed(() => import('@/pages/admin/AdminOrdersPage'), 'AdminOrdersPage')
 const AdminOrderDetailPage = lazyNamed(() => import('@/pages/admin/AdminOrderDetailPage'), 'AdminOrderDetailPage')
 const AdminUsersPage = lazyNamed(() => import('@/pages/admin/AdminUsersPage'), 'AdminUsersPage')
@@ -68,6 +70,9 @@ export function App() {
           <Route path="categories" element={<RequirePermission perm={PERM.categories}><AdminCategoriesPage /></RequirePermission>} />
           <Route path="categories/new" element={<RequirePermission perm={PERM.categories}><AdminCategoryFormPage /></RequirePermission>} />
           <Route path="categories/:id/edit" element={<RequirePermission perm={PERM.categories}><AdminCategoryFormPage /></RequirePermission>} />
+          <Route path="offers" element={<RequirePermission perm={PERM.offers}><AdminOffersPage /></RequirePermission>} />
+          <Route path="offers/new" element={<RequirePermission perm={PERM.offers}><AdminOfferFormPage /></RequirePermission>} />
+          <Route path="offers/:id/edit" element={<RequirePermission perm={PERM.offers}><AdminOfferFormPage /></RequirePermission>} />
           <Route path="orders" element={<RequirePermission perm={PERM.orders}><AdminOrdersPage /></RequirePermission>} />
           <Route path="orders/:id" element={<RequirePermission perm={PERM.orders}><AdminOrderDetailPage /></RequirePermission>} />
           <Route path="users" element={<RequirePermission perm={PERM.users}><AdminUsersPage /></RequirePermission>} />

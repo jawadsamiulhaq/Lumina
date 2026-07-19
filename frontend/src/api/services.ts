@@ -8,6 +8,9 @@ import type {
   AuthResponse,
   Cart,
   Category,
+  Offer,
+  AdminOffer,
+  OfferInput,
   CheckoutSession,
   DashboardStats,
   Order,
@@ -66,6 +69,17 @@ export const categoriesApi = {
   update: (id: number, body: { name: string }) =>
     api.put<Category>(`/categories/${id}`, body).then((r) => r.data),
   remove: (id: number) => api.delete(`/categories/${id}`).then((r) => r.data),
+}
+
+// ---- Offers ----
+export const offersApi = {
+  list: () => api.get<Offer[]>('/offers').then((r) => r.data),
+  // admin
+  adminList: () => api.get<AdminOffer[]>('/offers/admin').then((r) => r.data),
+  adminGet: (id: number) => api.get<AdminOffer>(`/offers/admin/${id}`).then((r) => r.data),
+  create: (body: OfferInput) => api.post<AdminOffer>('/offers', body).then((r) => r.data),
+  update: (id: number, body: OfferInput) => api.put<AdminOffer>(`/offers/${id}`, body).then((r) => r.data),
+  remove: (id: number) => api.delete(`/offers/${id}`).then((r) => r.data),
 }
 
 // ---- Cart ----
