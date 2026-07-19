@@ -34,6 +34,7 @@ const AdminOrderDetailPage = lazyNamed(() => import('@/pages/admin/AdminOrderDet
 const AdminUsersPage = lazyNamed(() => import('@/pages/admin/AdminUsersPage'), 'AdminUsersPage')
 const AdminUserDetailPage = lazyNamed(() => import('@/pages/admin/AdminUserDetailPage'), 'AdminUserDetailPage')
 const AdminEmailTemplatePage = lazyNamed(() => import('@/pages/admin/AdminEmailTemplatePage'), 'AdminEmailTemplatePage')
+const AdminEmailLogsPage = lazyNamed(() => import('@/pages/admin/AdminEmailLogsPage'), 'AdminEmailLogsPage')
 
 export function App() {
   return (
@@ -72,6 +73,7 @@ export function App() {
           <Route path="users" element={<RequirePermission perm={PERM.users}><AdminUsersPage /></RequirePermission>} />
           <Route path="users/:id" element={<RequirePermission perm={PERM.users}><AdminUserDetailPage /></RequirePermission>} />
           <Route path="email-templates" element={<RequirePermission perm={PERM.settings}><AdminEmailTemplatePage /></RequirePermission>} />
+          <Route path="email-logs" element={<RequirePermission perm={PERM.settings}><AdminEmailLogsPage /></RequirePermission>} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

@@ -279,6 +279,27 @@ export interface EmailTemplate {
   updatedAt: string
 }
 
+export type EmailStatus = 'Sent' | 'Logged' | 'Failed'
+
+export interface EmailLogListItem {
+  id: number
+  toEmail: string
+  subject: string
+  status: EmailStatus
+  hasError: boolean
+  createdAt: string
+}
+
+export interface EmailLogDetail {
+  id: number
+  toEmail: string
+  subject: string
+  body: string
+  status: EmailStatus
+  error: string | null
+  createdAt: string
+}
+
 export interface Role {
   id: string
   name: string

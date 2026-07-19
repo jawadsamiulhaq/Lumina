@@ -3,6 +3,8 @@ import type {
   AdminUser,
   AdminResetPasswordResult,
   EmailTemplate,
+  EmailLogListItem,
+  EmailLogDetail,
   AuthResponse,
   Cart,
   Category,
@@ -139,6 +141,12 @@ export const emailTemplatesApi = {
   update: (key: string, body: { subject: string; htmlBody: string }) =>
     api.put<EmailTemplate>(`/admin/email-templates/${key}`, body).then((r) => r.data),
   reset: (key: string) => api.post<EmailTemplate>(`/admin/email-templates/${key}/reset`, {}).then((r) => r.data),
+}
+
+export const emailLogsApi = {
+  list: (page = 1, pageSize = 20) =>
+    api.get<PagedResult<EmailLogListItem>>('/admin/email-logs', { params: { page, pageSize } }).then((r) => r.data),
+  get: (id: number) => api.get<EmailLogDetail>(`/admin/email-logs/${id}`).then((r) => r.data),
 }
 
 // ---- Admin: roles + permissions (RBAC) ----
