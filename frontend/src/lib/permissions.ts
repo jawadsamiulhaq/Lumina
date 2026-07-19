@@ -6,7 +6,8 @@ export const PERM = {
   orders: 'orders.manage',
   orderStats: 'orders.stats',
   users: 'users.manage',
+  settings: 'settings.manage',
 } as const
 
 /** Every permission that grants access to some part of the admin area. */
-export const ADMIN_PERMISSIONS: string[] = [PERM.dashboard, PERM.products, PERM.categories, PERM.orders, PERM.users]
+export const ADMIN_PERMISSIONS: string[] = [PERM.dashboard, PERM.products, PERM.categories, PERM.orders, PERM.users, PERM.settings]

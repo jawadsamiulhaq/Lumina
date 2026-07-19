@@ -20,6 +20,7 @@ public static class Permissions
     public const string ViewDashboard = "dashboard.view";
     public const string ViewOrders = "orders.view";
     public const string ViewOrderStats = "orders.stats";
+    public const string ManageSettings = "settings.manage";
     public const string WriteReviews = "reviews.write";
 
     /// <summary>All permissions with their descriptions, used for seeding.</summary>
@@ -33,12 +34,13 @@ public static class Permissions
         (ViewDashboard, "View the admin dashboard"),
         (ViewOrders, "View own orders"),
         (ViewOrderStats, "View order counts by status"),
+        (ManageSettings, "Manage store settings and email templates"),
         (WriteReviews, "Write product reviews"),
     };
 
     public static readonly string[] Admin =
     {
-        ManageProducts, ManageCategories, ManageOrders, ManageUsers, ImpersonateUsers, ViewDashboard, ViewOrders, ViewOrderStats, WriteReviews,
+        ManageProducts, ManageCategories, ManageOrders, ManageUsers, ImpersonateUsers, ViewDashboard, ViewOrders, ViewOrderStats, ManageSettings, WriteReviews,
     };
 
     public static readonly string[] Customer =

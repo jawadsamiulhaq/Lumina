@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Store, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Mail, Store, Menu, X } from 'lucide-react'
 import { Seo } from '@/components/Seo'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
@@ -13,6 +13,7 @@ const NAV = [
   { to: '/admin/categories', label: 'Categories', icon: FolderTree, end: false, perm: PERM.categories },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, end: false, perm: PERM.orders },
   { to: '/admin/users', label: 'Users', icon: Users, end: false, perm: PERM.users },
+  { to: '/admin/email-templates', label: 'Email templates', icon: Mail, end: false, perm: PERM.settings },
 ]
 
 export function AdminLayout() {

@@ -84,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IFileStorage, LocalFileStorage>();
         services.AddScoped<IEmailSender, EmailSender>();
+        services.AddScoped<IEmailTemplateService, EmailTemplateService>();
         services.AddScoped<IStripeService, StripeService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IProductService, ProductService>();

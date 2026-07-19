@@ -270,6 +270,15 @@ export interface AdminResetPasswordResult {
   temporaryPassword: string
 }
 
+export interface EmailTemplate {
+  key: string
+  name: string
+  subject: string
+  htmlBody: string
+  placeholders: string[]
+  updatedAt: string
+}
+
 export interface Role {
   id: string
   name: string

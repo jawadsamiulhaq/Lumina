@@ -18,6 +18,7 @@ public class AuthService : IAuthService
     private readonly ITokenService _tokens;
     private readonly AppDbContext _db;
     private readonly IEmailSender _email;
+    private readonly IEmailTemplateService _templates;
     private readonly FrontendSettings _frontend;
     private readonly ILogger<AuthService> _logger;
 
@@ -26,6 +27,7 @@ public class AuthService : IAuthService
         ITokenService tokens,
         AppDbContext db,
         IEmailSender email,
+        IEmailTemplateService templates,
         IOptions<FrontendSettings> frontend,
         ILogger<AuthService> logger)
     {
@@ -33,6 +35,7 @@ public class AuthService : IAuthService
         _tokens = tokens;
         _db = db;
         _email = email;
+        _templates = templates;
         _frontend = frontend.Value;
         _logger = logger;
     }
@@ -191,14 +194,12 @@ public class AuthService : IAuthService
         var link = $"{_frontend.BaseUrl.TrimEnd('/')}/reset-password" +
                    $"?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(token)}";
 
-        var body =
-            $"<p>Hi {System.Net.WebUtility.HtmlEncode(user.FirstName)},</p>" +
-            "<p>We received a request to reset your password. Click the link below to choose a new one. " +
-            "If you didn't request this, you can safely ignore this email.</p>" +
-            $"<p><a href=\"{link}\">Reset your password</a></p>" +
-            "<p>This link will expire shortly for your security.</p>";
+        var rendered = await _templates.RenderAsync(
+            EmailTemplateKeys.PasswordReset,
+            new Dictionary<string, string> { ["firstName"] = user.FirstName, ["resetLink"] = link },
+            ct);
 
-        await _email.SendAsync(user.Email, "Reset your Lumina password", body, ct);
+        await _email.SendAsync(user.Email, rendered.Subject, rendered.HtmlBody, ct);
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)

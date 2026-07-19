@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import type {
   AdminUser,
   AdminResetPasswordResult,
+  EmailTemplate,
   AuthResponse,
   Cart,
   Category,
@@ -131,6 +132,13 @@ export const adminApi = {
   impersonateUser: (id: string) =>
     api.post<AuthResponse>(`/admin/users/${id}/impersonate`, {}).then((r) => r.data),
   dashboard: () => api.get<DashboardStats>('/admin/dashboard').then((r) => r.data),
+}
+
+export const emailTemplatesApi = {
+  get: (key: string) => api.get<EmailTemplate>(`/admin/email-templates/${key}`).then((r) => r.data),
+  update: (key: string, body: { subject: string; htmlBody: string }) =>
+    api.put<EmailTemplate>(`/admin/email-templates/${key}`, body).then((r) => r.data),
+  reset: (key: string) => api.post<EmailTemplate>(`/admin/email-templates/${key}/reset`, {}).then((r) => r.data),
 }
 
 // ---- Admin: roles + permissions (RBAC) ----
